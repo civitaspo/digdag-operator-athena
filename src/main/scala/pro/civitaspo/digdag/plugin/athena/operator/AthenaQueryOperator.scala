@@ -7,6 +7,7 @@ import io.digdag.client.config.Config
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 
 import scala.util.Try
+import scala.util.hashing.MurmurHash3
 
 class AthenaQueryOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
   extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
@@ -22,6 +23,11 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
       workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
     }
     t.getOrElse(queryOrFile)
+  }
+
+  protected lazy val clientRequestToken: String = {
+    val queryHash: Int = MurmurHash3.bytesHash(query.getBytes(UTF_8), 0)
+    s"$tokenPrefix-$sessionUuid-$queryHash"
   }
 
   override def runTask(): TaskResult = null
