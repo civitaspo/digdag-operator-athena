@@ -76,7 +76,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **athena>**: The SQL query statements or file to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, optional)
+- **athena.query>**: The SQL query statements or file to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
 - **output**: The location in Amazon S3 where your query results are stored, such as s3://path/to/query/bucket/. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, required)
