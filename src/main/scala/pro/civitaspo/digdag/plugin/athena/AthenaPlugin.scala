@@ -16,9 +16,7 @@ object AthenaPlugin {
     @Inject protected var templateEngine: TemplateEngine = null
 
     override def get(): JList[OperatorFactory] = {
-      JArrays.asList(
-        operatorFactory("athena.query", classOf[AthenaQueryOperator])
-      )
+      JArrays.asList(operatorFactory("athena.query", classOf[AthenaQueryOperator]))
     }
 
     private def operatorFactory[T <: AbstractAthenaOperator](operatorName: String, klass: Class[T]): OperatorFactory = {
