@@ -97,30 +97,44 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.last_query.completed_at**: The unix timestamp that the query completed. (integer)
 
 
-# Publishing your plugin using Github and Jitpack
+# Development
 
-[Jitpack](https://jitpack.io/) is useful for publishing your github repository as a maven repository.
+## Run an Example
+
+### 1) build
 
 ```sh
-git tag v0.1.3
-git push origin v0.1.3
+./gradlew publish
 ```
 
-https://jitpack.io/#myui/digdag-plugin-example/v0.1.3
+Artifacts are build on local repos: `./build/repo`.
 
-Now, you can load the artifact from a github repository in [a dig file](https://github.com/myui/digdag-plugin-example/blob/master/sample/plugin.dig) as follows:
+### 2) get your aws profile
 
-```
-_export:
-  plugin:
-    repositories:
-      # - file://${repos}
-      - https://jitpack.io
-    dependencies:
-      # - io.digdag.plugin:digdag-plugin-example:0.1.3
-      - com.github.myui:digdag-plugin-example:v0.1.3
+```sh
+aws configure
 ```
 
-# Further reading
+### 3) run an example
 
-- [Operators](http://docs.digdag.io/operators.html) and [their implementations](https://github.com/treasure-data/digdag/tree/master/digdag-standards/src/main/java/io/digdag/standards/operator)
+```sh
+./example/run.sh
+```
+
+## (TODO) Run Tests
+
+```sh
+./gradlew test
+```
+
+# ChangeLog
+
+[CHANGELOG.md](./CHANGELOG.md)
+
+# License
+
+[Apache License 2.0](./LICENSE.txt)
+
+# Author
+
+@civitaspo
