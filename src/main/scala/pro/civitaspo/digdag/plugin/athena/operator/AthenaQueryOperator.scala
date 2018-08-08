@@ -2,6 +2,7 @@ package pro.civitaspo.digdag.plugin.athena.operator
 
 import java.nio.charset.StandardCharsets.UTF_8
 
+import com.amazonaws.services.athena.model.{QueryExecutionContext, ResultConfiguration, StartQueryExecutionRequest}
 import com.google.common.base.Optional
 import io.digdag.client.config.Config
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
@@ -30,5 +31,24 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     s"$tokenPrefix-$sessionUuid-$queryHash"
   }
 
-  override def runTask(): TaskResult = null
+  override def runTask(): TaskResult = {
+    val execId: String = withAthena { athena =>
+      val req = buildStartQueryExecutionRequest
+      val r = athena.startQueryExecution(req)
+      r.getQueryExecutionId
+    }
+
+    null
+  }
+
+  def buildStartQueryExecutionRequest: StartQueryExecutionRequest = {
+    val req = new StartQueryExecutionRequest()
+
+    req.setClientRequestToken(clientRequestToken)
+    if (database.isPresent) req.setQueryExecutionContext(new QueryExecutionContext().withDatabase(database.get()))
+    req.setQueryString(query)
+    req.setResultConfiguration(new ResultConfiguration().withOutputLocation(output))
+
+    req
+  }
 }
