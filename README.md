@@ -74,20 +74,28 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **region**: The AWS region to use for EMR service. (string, optional)
 - **endpoint**: The AWS EMR endpoint address to use. (string, optional)
 
+## Configuration for `athena>` operator
 
-You can optionally create Eclipse/Idea project files as follows:
-```sh
-gradle eclipse
-gradle idea
-```
+### Options
 
-*Note:* _It's better to change the dependencies from `provided` to `compile` in [build.gradle](https://github.com/myui/digdag-plugin-example/blob/master/build.gradle) for creating idea/eclipse project config._
+- **athena>**: The SQL query statements or file to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, optional)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena"`)
+- **database**: The name of the database. (string, optional)
+- **output**: The location in Amazon S3 where your query results are stored, such as s3://path/to/query/bucket/. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html).
 
-# Plugin Loading
+### Output Parameters
 
-Digdag loads pluigins from Maven repositories by configuring [plugin options](https://github.com/myui/digdag-plugin-example/blob/master/sample/plugin.dig).
+- **athena.last_query.id**: The unique identifier for each query execution. (string)
+- **athena.last_query.database**: The name of the database. (string)
+- **athena.last_query.query**: The SQL query statements which the query execution ran. (string)
+- **athena.last_query.output**: The location in Amazon S3 where your query results are stored. (string)
+- **athena.last_query.scan_bytes**: The number of bytes in the data that was queried. (long)
+- **athena.last_query.exec_millis**: The number of milliseconds that the query took to execute. (long)
+- **athena.last_query.state**: The state of query execution. SUBMITTED indicates that the query is queued for execution. RUNNING indicates that the query is scanning data and returning results. SUCCEEDED indicates that the query completed without error. FAILED indicates that the query experienced an error and did not complete processing. CANCELLED indicates that user input interrupted query execution. (string)
+- **athena.last_query.state_change_reason**: Further detail about the status of the query. (string)
+- **athena.last_query.submitted_at**: The unix timestamp that the query was submitted. (integer)
+- **athena.last_query.completed_at**: The unix timestamp that the query completed. (integer)
 
-You can use a local Maven repository (local FS, Amazon S3) or any public Maven repository ([Maven Central](http://search.maven.org/), [Sonatype](https://www.sonatype.com/), [Bintary](https://bintray.com/), [Jitpack](https://jitpack.io/)) for the plugin artifact repository.
 
 # Publishing your plugin using Github and Jitpack
 
