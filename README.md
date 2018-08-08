@@ -20,7 +20,7 @@ _export:
     auth_method: profile
 
 +step1:
-  athena>: select 1
+  athena.query>: select 1
   output: s3://mybucket/path/to/
 ```
 
@@ -72,7 +72,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **region**: The AWS region to use for EMR service. (string, optional)
 - **endpoint**: The AWS EMR endpoint address to use. (string, optional)
 
-## Configuration for `athena>` operator
+## Configuration for `athena.query>` operator
 
 ### Options
 
