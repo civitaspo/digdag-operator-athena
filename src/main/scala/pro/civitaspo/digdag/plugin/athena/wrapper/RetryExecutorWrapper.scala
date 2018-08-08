@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.wrapper
 
 import java.time.Duration
-import java.util.concurrent.Callable
+import java.util.concurrent.{Callable, ExecutionException}
 
 import io.digdag.util.RetryExecutor
 import io.digdag.util.RetryExecutor.{GiveupAction, RetryAction, RetryGiveupException, RetryPredicate}
@@ -9,6 +9,8 @@ import io.digdag.util.RetryExecutor.{GiveupAction, RetryAction, RetryGiveupExcep
 case class ParamInWrapper(timeoutDurationMillis: Int, totalWaitMillisCounter: Iterator[Int] = Stream.from(0).iterator, hasOnRetry: Boolean = false)
 case class ParamInRetry(e: Exception, retryCount: Int, retryLimit: Int, retryWaitMillis: Int, totalWaitMillis: Long)
 case class ParamInGiveup(firstException: Exception, lastException: Exception)
+
+class RetryableException(message: String) extends ExecutionException(message)
 
 class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
