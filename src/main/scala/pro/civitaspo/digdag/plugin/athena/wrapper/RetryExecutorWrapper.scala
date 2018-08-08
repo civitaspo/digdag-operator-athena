@@ -11,6 +11,7 @@ case class ParamInRetry(e: Exception, retryCount: Int, retryLimit: Int, retryWai
 case class ParamInGiveup(firstException: Exception, lastException: Exception)
 
 class RetryableException(message: String) extends ExecutionException(message)
+class NotRetryableException(message: String) extends ExecutionException(message)
 
 class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
