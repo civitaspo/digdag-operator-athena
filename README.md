@@ -1,5 +1,5 @@
-# digdag-plugin-example
-[![Jitpack](https://jitpack.io/v/myui/digdag-plugin-example.svg)](https://jitpack.io/#myui/digdag-plugin-example) [![Digdag](https://img.shields.io/badge/digdag-v0.9.12-brightgreen.svg)](https://github.com/treasure-data/digdag/releases/tag/v0.9.12)
+# digdag-operator-athena
+[![Jitpack](https://jitpack.io/v/pro.civitaspo/digdag-operator-athena.svg)](https://jitpack.io/#pro.civitaspo/digdag-operator-athena) [![CircleCI](https://circleci.com/gh/civitaspo/digdag-operator-athena.svg?style=shield)](https://circleci.com/gh/civitaspo/digdag-operator-athena) [![Digdag](https://img.shields.io/badge/digdag-v0.9.27-brightgreen.svg)](https://github.com/treasure-data/digdag/releases/tag/v0.9.27)
 
 # 1) build
 
