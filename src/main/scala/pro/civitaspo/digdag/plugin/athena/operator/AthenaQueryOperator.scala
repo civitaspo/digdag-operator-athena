@@ -103,10 +103,10 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
           case SUCCEEDED =>
             logger.info(s"[$operatorName] query is `$SUCCEEDED`")
             qe
-          case FAILED => throw new NotRetryableException(s"[$operatorName] query is `$FAILED`")
-          case CANCELLED => throw new NotRetryableException(s"[$operatorName] query is `$CANCELLED`")
-          case RUNNING => throw new RetryableException(s"query is `$RUNNING`")
-          case QUEUED => throw new RetryableException(s"query is `$QUEUED`")
+          case FAILED => throw new NotRetryableException(message = s"[$operatorName] query is `$FAILED`")
+          case CANCELLED => throw new NotRetryableException(message = s"[$operatorName] query is `$CANCELLED`")
+          case RUNNING => throw new RetryableException(message = s"query is `$RUNNING`")
+          case QUEUED => throw new RetryableException(message = s"query is `$QUEUED`")
         }
       }
   }
