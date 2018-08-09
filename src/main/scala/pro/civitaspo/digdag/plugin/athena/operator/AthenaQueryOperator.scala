@@ -100,7 +100,9 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
         val stateStr = Option(status.getState).getOrElse(throw new RetryableException("state is null"))
 
         QueryExecutionState.fromValue(stateStr) match {
-          case SUCCEEDED => qe
+          case SUCCEEDED =>
+            logger.info(s"[$operatorName] query is `$SUCCEEDED`")
+            qe
           case FAILED => throw new NotRetryableException(s"[$operatorName] query is `$FAILED`")
           case CANCELLED => throw new NotRetryableException(s"[$operatorName] query is `$CANCELLED`")
           case RUNNING => throw new RetryableException(s"query is `$RUNNING`")
