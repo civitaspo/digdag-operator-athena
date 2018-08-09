@@ -183,7 +183,7 @@ abstract class AbstractAthenaOperator(operatorName: String, context: OperatorCon
     val protocol: Protocol = httpProxy.getSecretOptional("scheme").or("https") match {
       case "http" => Protocol.HTTP
       case "https" => Protocol.HTTPS
-      case _ => throw new ConfigException(s"""[$operatorName] `emr_fleet.http_proxy.scheme` must be "http" or "https".""")
+      case _ => throw new ConfigException(s"""[$operatorName] `athena.http_proxy.scheme` must be "http" or "https".""")
     }
     val user: Optional[String] = httpProxy.getSecretOptional("user")
     val password: Optional[String] = httpProxy.getSecretOptional("password")

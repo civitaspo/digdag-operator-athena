@@ -20,8 +20,12 @@ _export:
     auth_method: profile
 
 +step1:
-  athena.query>: select 1
-  output: s3://mybucket/path/to/
+  athena.query>: template.sql
+  output: s3://mybucket/prefix/
+
++step2:
+  echo>: ${athena.last_query}
+
 ```
 
 # Configuration
