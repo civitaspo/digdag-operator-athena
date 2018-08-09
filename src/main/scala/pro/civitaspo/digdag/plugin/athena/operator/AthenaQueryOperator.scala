@@ -13,7 +13,8 @@ import com.amazonaws.services.athena.model.{
 }
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.google.common.base.Optional
-import io.digdag.client.config.Config
+import com.google.common.collect.ImmutableList
+import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
@@ -50,7 +51,13 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
       r.getQueryExecutionId
     }
 
-    null
+    val qe: QueryExecution = pollingQueryExecution(execId)
+    val p: Config = buildStoredParamFromQueryExecution(qe)
+
+    val builder = TaskResult.defaultBuilder(request)
+    builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+    builder.storeParams(p)
+    builder.build()
   }
 
   def buildStartQueryExecutionRequest: StartQueryExecutionRequest = {
@@ -100,5 +107,23 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
           case QUEUED => throw new RetryableException(s"query is `$QUEUED`")
         }
       }
+  }
+
+  def buildStoredParamFromQueryExecution(qe: QueryExecution): Config = {
+    val ret = cf.create()
+    val lastQueryParam = ret.getNestedOrSetEmpty("athena").getNestedOrSetEmpty("last_query")
+
+    lastQueryParam.set("id", qe.getQueryExecutionId)
+    lastQueryParam.set("database", Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("query", qe.getQuery)
+    lastQueryParam.set("output", qe.getResultConfiguration.getOutputLocation)
+    lastQueryParam.set("scan_bytes", Try(Option(qe.getStatistics.getDataScannedInBytes)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("exec_millis", Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("state", Try(Option(qe.getStatus.getState)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("state_change_reason", Try(Option(qe.getStatus.getStateChangeReason)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("submitted_at", Try(Option(qe.getStatus.getSubmissionDateTime.getTime / 1000)).getOrElse(None).getOrElse(Optional.absent()))
+    lastQueryParam.set("completed_at", Try(Option(qe.getStatus.getCompletionDateTime.getTime / 1000)).getOrElse(None).getOrElse(Optional.absent()))
+
+    ret
   }
 }
