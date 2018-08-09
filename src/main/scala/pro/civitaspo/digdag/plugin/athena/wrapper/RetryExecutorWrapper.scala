@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.wrapper
 
 import java.time.Duration
-import java.util.concurrent.{Callable, ExecutionException}
+import java.util.concurrent.Callable
 
 import io.digdag.util.RetryExecutor
 import io.digdag.util.RetryExecutor.{GiveupAction, RetryAction, RetryGiveupException, RetryPredicate}
@@ -10,8 +10,8 @@ case class ParamInWrapper(timeoutDurationMillis: Int, totalWaitMillisCounter: It
 case class ParamInRetry(e: Exception, retryCount: Int, retryLimit: Int, retryWaitMillis: Int, totalWaitMillis: Long)
 case class ParamInGiveup(firstException: Exception, lastException: Exception)
 
-class RetryableException(message: String) extends ExecutionException(message)
-class NotRetryableException(message: String) extends ExecutionException(message)
+class RetryableException(message: String = "", cause: Throwable = null) extends RuntimeException(message, cause)
+class NotRetryableException(message: String = "", cause: Throwable = null) extends RuntimeException(message, cause)
 
 class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
 
@@ -68,21 +68,39 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
   }
 
   def runInterruptible[T](f: => T): T = {
-    if (!param.hasOnRetry) return onRetry { _ =>
-      }.runInterruptible(f)
+    executeWithWrappedRetryExecutorWrapper { w =>
+      w._runInterruptible(f)
+    }
+  }
+
+  def run[T](f: => T): T = {
+    executeWithWrappedRetryExecutorWrapper { w =>
+      w._run(f)
+    }
+  }
+
+  private def _runInterruptible[T](f: => T): T = {
     val c = new Callable[T] {
       override def call(): T = f
     }
     exe.runInterruptible(c)
   }
 
-  def run[T](f: => T): T = {
-    if (!param.hasOnRetry) return onRetry { _ =>
-      }.run(f)
+  private def _run[T](f: => T): T = {
     val c = new Callable[T] {
       override def call(): T = f
     }
     exe.run(c)
+  }
+
+  private def executeWithWrappedRetryExecutorWrapper[T](f: RetryExecutorWrapper => T): T = {
+    val wrapped = if (!param.hasOnRetry) onRetry { _ =>
+      }
+    else this
+    try f(wrapped)
+    catch {
+      case ex: RetryGiveupException => throw new NotRetryableException(cause = ex)
+    }
   }
 }
 
