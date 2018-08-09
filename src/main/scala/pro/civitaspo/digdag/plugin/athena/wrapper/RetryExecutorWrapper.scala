@@ -43,7 +43,7 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
     RetryExecutorWrapper(exe.retryIf(r), param)
   }
 
-  def onRetry(f: ParamInRetry => Unit): RetryExecutorWrapper = {
+  def onRetry(f: ParamInRetry => Unit = _ => ()): RetryExecutorWrapper = {
     val r = new RetryAction {
       override def onRetry(exception: Exception, retryCount: Int, retryLimit: Int, retryWait: Int): Unit = {
         val totalWaitMillis: Int = param.totalWaitMillisCounter.next()
@@ -94,9 +94,7 @@ class RetryExecutorWrapper(exe: RetryExecutor, param: ParamInWrapper) {
   }
 
   private def executeWithWrappedRetryExecutorWrapper[T](f: RetryExecutorWrapper => T): T = {
-    val wrapped = if (!param.hasOnRetry) onRetry { _ =>
-      }
-    else this
+    val wrapped = if (!param.hasOnRetry) onRetry() else this
     try f(wrapped)
     catch {
       case ex: RetryGiveupException => throw new NotRetryableException(cause = ex)
