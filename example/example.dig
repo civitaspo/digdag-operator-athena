@@ -9,10 +9,10 @@ _export:
     auth_method: profile
     query:
       output: ${output}
-
+      value: 5
 
 +step1:
-  athena.query>: select 1
+  athena.query>: template.sql
 
 +step2:
   echo>: ${athena.last_query}
