@@ -49,10 +49,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Secrets
 
-- **athena.access_key_id**: The AWS Access Key ID to use when submitting EMR jobs. (optional)
-- **athena.secret_access_key**: The AWS Secret Access Key to use when submitting EMR jobs. (optional)
-- **athena.session_token**: The AWS session token to use when submitting EMR jobs. This is used only **auth_method** is `"session"` (optional)
-- **athena.role_arn**: The AWS Role to assume when submitting EMR jobs. (optional)
+- **athena.access_key_id**: The AWS Access Key ID to use when submitting Athena Query. (optional)
+- **athena.secret_access_key**: The AWS Secret Access Key to use when submitting Athena Query. (optional)
+- **athena.session_token**: The AWS session token to use when submitting Athena Query. This is used only **auth_method** is `"session"` (optional)
+- **athena.role_arn**: The AWS Role to assume when submitting Athena Query. (optional)
 - **athena.role_session_name**: The AWS Role Session Name when assuming the role. (default: `digdag-athena-${session_uuid}`)
 - **athena.http_proxy.host**: proxy host (required if **use_http_proxy** is `true`)
 - **athena.http_proxy.port** proxy port (optional)
@@ -73,8 +73,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"anonymous"`: uses anonymous access. This auth method can access only public files.
   - `"session"`: uses temporary-generated access_key_id, secret_access_key and session_token.
 - **use_http_proxy**: Indicate whether using when accessing AWS via http proxy. (boolean, default: `false`)
-- **region**: The AWS region to use for EMR service. (string, optional)
-- **endpoint**: The AWS EMR endpoint address to use. (string, optional)
+- **region**: The AWS region to use for Athena service. (string, optional)
+- **endpoint**: The Amazon Athena endpoint address to use. (string, optional)
 
 ## Configuration for `athena.query>` operator
 
