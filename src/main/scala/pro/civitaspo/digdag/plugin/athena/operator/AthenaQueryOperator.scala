@@ -12,13 +12,15 @@ import com.amazonaws.services.athena.model.{
   StartQueryExecutionRequest
 }
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
+import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
-import io.digdag.client.config.{Config, ConfigKey}
+import io.digdag.client.config.{Config, ConfigException, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 
+import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.hashing.MurmurHash3
 
@@ -28,7 +30,10 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val queryOrFile: String = params.get("_command", classOf[String])
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val output: String = params.get("output", classOf[String])
+  protected val output: String = {
+    val o = params.get("output", classOf[String])
+    if (o.endsWith("/")) o else s"$o/"
+  }
   protected val keepMetadata: Boolean = params.get("keep_metadata", classOf[Boolean], false)
   protected val saveMode: String = params.get("save_mode", classOf[String], "overwrite")
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
@@ -47,19 +52,101 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   }
 
   override def runTask(): TaskResult = {
-    val execId: String = withAthena { athena =>
-      val req = buildStartQueryExecutionRequest
-      val r = athena.startQueryExecution(req)
-      r.getQueryExecutionId
+    saveMode match {
+      case "error_if_exists" =>
+        val uri = new AmazonS3URI(output, false)
+        val result = withS3(_.listObjectsV2(uri.getBucket, uri.getKey))
+
+        if (!result.getObjectSummaries.isEmpty) throw new IllegalStateException(s"[$operatorName] some objects already exists in `$output`.")
+        val execId: String = startQueryExecution
+        val qe: QueryExecution = pollingQueryExecution(execId)
+
+        if (!keepMetadata) {
+          val metadataLocation: String = s"${qe.getResultConfiguration.getOutputLocation}.metadata"
+          logger.info(s"[$operatorName] Delete `$metadataLocation`.")
+          val mUri = new AmazonS3URI(metadataLocation, false)
+          withS3(_.deleteObject(mUri.getBucket, mUri.getKey))
+        }
+        val p: Config = buildStoredParamFromQueryExecution(qe)
+
+        val builder = TaskResult.defaultBuilder(request)
+        builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+        builder.storeParams(p)
+        builder.build()
+      case "ignore" =>
+        val uri = new AmazonS3URI(output, false)
+        val result = withS3(_.listObjectsV2(uri.getBucket, uri.getKey))
+
+        if (!result.getObjectSummaries.isEmpty) {
+          logger.info(s"[$operatorName] some objects already exists in $output so do nothing in this session: `$sessionUuid`.")
+          val builder = TaskResult.defaultBuilder(request)
+          builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+          return builder.build()
+        }
+        val execId: String = startQueryExecution
+        val qe: QueryExecution = pollingQueryExecution(execId)
+
+        if (!keepMetadata) {
+          val metadataLocation: String = s"${qe.getResultConfiguration.getOutputLocation}.metadata"
+          logger.info(s"[$operatorName] Delete $metadataLocation.")
+          val mUri = new AmazonS3URI(metadataLocation, false)
+          withS3(_.deleteObject(mUri.getBucket, mUri.getKey))
+        }
+
+        val p: Config = buildStoredParamFromQueryExecution(qe)
+
+        val builder = TaskResult.defaultBuilder(request)
+        builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+        builder.storeParams(p)
+        builder.build()
+      case "append" =>
+        val execId: String = startQueryExecution
+        val qe: QueryExecution = pollingQueryExecution(execId)
+
+        if (!keepMetadata) {
+          val metadataLocation: String = s"${qe.getResultConfiguration.getOutputLocation}.metadata"
+          logger.info(s"[$operatorName] Delete $metadataLocation.")
+          val mUri = new AmazonS3URI(metadataLocation, false)
+          withS3(_.deleteObject(mUri.getBucket, mUri.getKey))
+        }
+
+        val p: Config = buildStoredParamFromQueryExecution(qe)
+
+        val builder = TaskResult.defaultBuilder(request)
+        builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+        builder.storeParams(p)
+        builder.build()
+      case "overwrite" =>
+        val uri = new AmazonS3URI(output, false)
+        val result = withS3(_.listObjectsV2(uri.getBucket, uri.getKey))
+
+        val execId: String = startQueryExecution
+        val qe: QueryExecution = pollingQueryExecution(execId)
+        result.getObjectSummaries.asScala.foreach { summary =>
+          logger.info(s"[$operatorName] Delete s3://${summary.getBucketName}/${summary.getKey}")
+          withS3(_.deleteObject(summary.getBucketName, summary.getKey))
+        }
+        if (!keepMetadata) {
+          val metadataLocation: String = s"${qe.getResultConfiguration.getOutputLocation}.metadata"
+          logger.info(s"[$operatorName] Delete $metadataLocation.")
+          val mUri = new AmazonS3URI(metadataLocation, false)
+          withS3(_.deleteObject(mUri.getBucket, mUri.getKey))
+        }
+
+        val p: Config = buildStoredParamFromQueryExecution(qe)
+
+        val builder = TaskResult.defaultBuilder(request)
+        builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
+        builder.storeParams(p)
+        builder.build()
+      case unknown => throw new ConfigException(s"[$operatorName] Save mode '$unknown' is unsupported.")
     }
+  }
 
-    val qe: QueryExecution = pollingQueryExecution(execId)
-    val p: Config = buildStoredParamFromQueryExecution(qe)
-
-    val builder = TaskResult.defaultBuilder(request)
-    builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
-    builder.storeParams(p)
-    builder.build()
+  def startQueryExecution: String = {
+    val req = buildStartQueryExecutionRequest
+    val r = withAthena(_.startQueryExecution(req))
+    r.getQueryExecutionId
   }
 
   def buildStartQueryExecutionRequest: StartQueryExecutionRequest = {
