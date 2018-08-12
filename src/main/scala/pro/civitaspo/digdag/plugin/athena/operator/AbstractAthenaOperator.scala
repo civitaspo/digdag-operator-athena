@@ -1,7 +1,17 @@
 package pro.civitaspo.digdag.plugin.athena.operator
 
 import com.amazonaws.{ClientConfiguration, Protocol}
-import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials, EC2ContainerCredentialsProviderWrapper, EnvironmentVariableCredentialsProvider, SystemPropertiesCredentialsProvider}
+import com.amazonaws.auth.{
+  AnonymousAWSCredentials,
+  AWSCredentials,
+  AWSCredentialsProvider,
+  AWSStaticCredentialsProvider,
+  BasicAWSCredentials,
+  BasicSessionCredentials,
+  EC2ContainerCredentialsProviderWrapper,
+  EnvironmentVariableCredentialsProvider,
+  SystemPropertiesCredentialsProvider
+}
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
