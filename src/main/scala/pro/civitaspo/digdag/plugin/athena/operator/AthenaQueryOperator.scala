@@ -145,13 +145,13 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     builder.build()
   }
 
-  def startQueryExecution: String = {
+  protected def startQueryExecution: String = {
     val req = buildStartQueryExecutionRequest
     val r = withAthena(_.startQueryExecution(req))
     r.getQueryExecutionId
   }
 
-  def buildStartQueryExecutionRequest: StartQueryExecutionRequest = {
+  protected def buildStartQueryExecutionRequest: StartQueryExecutionRequest = {
     val req = new StartQueryExecutionRequest()
 
     req.setClientRequestToken(clientRequestToken)
@@ -162,7 +162,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     req
   }
 
-  def pollingQueryExecution(execId: String): LastQuery = {
+  protected def pollingQueryExecution(execId: String): LastQuery = {
     val req = new GetQueryExecutionRequest().withQueryExecutionId(execId)
 
     RetryExecutorWrapper()
@@ -200,7 +200,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
       }
   }
 
-  def buildLastQueryParam(lastQuery: LastQuery): Config = {
+  protected def buildLastQueryParam(lastQuery: LastQuery): Config = {
     val ret = cf.create()
     val lastQueryParam = ret.getNestedOrSetEmpty("athena").getNestedOrSetEmpty("last_query")
 
