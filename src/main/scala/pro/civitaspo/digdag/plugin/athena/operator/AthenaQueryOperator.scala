@@ -29,6 +29,8 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
   protected val output: String = params.get("output", classOf[String])
+  protected val keepMetadata: Boolean = params.get("keep_metadata", classOf[Boolean], false)
+  protected val saveMode: String = params.get("save_mode", classOf[String], "overwrite")
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
 
   protected lazy val query: String = {
