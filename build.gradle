@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'pro.civitaspo'
-version = '0.0.2'
+version = '0.0.3'
 
 def digdagVersion = '0.9.27'
 def awsSdkVersion = "1.11.372"
@@ -27,8 +27,10 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.scala-lang/scala-library
     compile group: 'org.scala-lang', name: 'scala-library', version: scalaSemanticVersion
-    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-emr
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-athena
     compile group: 'com.amazonaws', name: 'aws-java-sdk-athena', version: awsSdkVersion
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: awsSdkVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sts
     compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
 }
