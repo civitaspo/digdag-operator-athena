@@ -28,6 +28,10 @@ import scala.util.hashing.MurmurHash3
 class AthenaQueryOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
 
+  object AmazonS3URI {
+    def apply(path: String): AmazonS3URI = new AmazonS3URI(path, false)
+  }
+
   sealed abstract class SaveMode
 
   object SaveMode {
@@ -68,8 +72,8 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
         id = qe.getQueryExecutionId,
         database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
         query = qe.getQuery,
-        outputCsvUri = new AmazonS3URI(qe.getResultConfiguration.getOutputLocation, false),
-        outputCsvMetadataUri = new AmazonS3URI(s"${qe.getResultConfiguration.getOutputLocation}.metadata", false),
+        outputCsvUri = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
+        outputCsvMetadataUri = AmazonS3URI(s"${qe.getResultConfiguration.getOutputLocation}.metadata"),
         scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
         execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
         state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -85,7 +89,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
   protected val output: AmazonS3URI = {
     val o = params.get("output", classOf[String])
-    new AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
+    AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
   }
   protected val keepMetadata: Boolean = params.get("keep_metadata", classOf[Boolean], false)
   protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
