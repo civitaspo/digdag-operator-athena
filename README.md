@@ -105,6 +105,28 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.last_query.submitted_at**: The unix timestamp that the query was submitted. (integer)
 - **athena.last_query.completed_at**: The unix timestamp that the query completed. (integer)
 
+## Configuration for `athena.preview>` operator
+
+### Options
+
+- **athena.preview>**: The identifier for the query execution that is succeeded. (string, required)
+- **max_rows**: The maximum number of rows to preview. 0 ~ 100 is valid. (integer, default: `10`)
+
+### Output Parameters
+
+- **athena.last_preview.id**: The identifier for the query execution. (string)
+- **athena.last_preview.columns**: The information that describes the column structure and data types of a table of query results. (map of array)
+  - **case_sensitive**: Indicates whether values in the column are case-sensitive. (boolean)
+  - **catalog_name**: The catalog to which the query results belong. (string)
+  - **label**: A column label. (string)
+  - **name**: The name of the column. (string)
+  - **nullable**: Indicates the column's nullable status. (one of `NOT_NULL`, `NULLABLE`, `UNKNOWN`)
+  - **precision**: For `DECIMAL` data types, specifies the total number of digits, up to 38. For performance reasons, we recommend up to 18 digits. (integer)
+  - **scale**: For `DECIMAL` data types, specifies the total number of digits in the fractional part of the value. Defaults to 0. (integer)
+  - **database**: The database name to which the query results belong. (string)
+  - **table**: The table name for the query results. (string)
+  - **type**: The data type of the column. (string)
+- **athena.last_preview.rows**: The rows in the preview results. (array of array)
 
 # Development
 
