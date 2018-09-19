@@ -117,7 +117,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.last_preview.id**: The identifier for the query execution. (string)
 - **athena.last_preview.columns**: The information that describes the column structure and data types of a table of query results. (map of array)
   - **case_sensitive**: Indicates whether values in the column are case-sensitive. (boolean)
-  - **catalog_name**: The catalog to which the query results belong. (string)
+  - **catalog**: The catalog to which the query results belong. (string)
   - **label**: A column label. (string)
   - **name**: The name of the column. (string)
   - **nullable**: Indicates the column's nullable status. (one of `NOT_NULL`, `NULLABLE`, `UNKNOWN`)
