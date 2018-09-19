@@ -40,7 +40,7 @@ class AthenaPreviewOperator (operatorName: String, context: OperatorContext, sys
         id = id,
         columns = r.getResultSet.getResultSetMetadata.getColumnInfo.asScala.map { ci =>
           LastPreviewColumnInfo(
-            caseSensitive = Try(Option(Boolean(ci.getCaseSensitive))).getOrElse(None),
+            caseSensitive = Try(Option(Boolean.unbox(ci.getCaseSensitive))).getOrElse(None),
             catalog = Try(Option(ci.getCatalogName)).getOrElse(None),
             label = Try(Option(ci.getLabel)).getOrElse(None),
             name = ci.getName,
