@@ -52,8 +52,7 @@ class AthenaPreviewOperator (operatorName: String, context: OperatorContext, sys
             `type` = ci.getType
           )
         },
-        rows = r.getResultSet.getRows.asScala.map { row => row.getData.asScala.map(_.getVarCharValue)
-        }
+        rows = r.getResultSet.getRows.asScala.map(_.getData.asScala.map(_.getVarCharValue)).tail // the first row is column names
       )
     }
   }
