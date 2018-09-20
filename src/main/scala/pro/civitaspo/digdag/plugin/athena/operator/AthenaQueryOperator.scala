@@ -239,4 +239,19 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
 
     subTask
   }
+
+  protected def buildRemoveMetadataSubTaskConfig(lastQuery: LastQuery): Config = {
+    val subTask: Config = cf.create()
+    subTask.set("_type", "athena.remove_metadata")
+    subTask.set("_command", lastQuery.outputCsvMetadataUri.toString)
+
+    subTask.set("auth_method", authMethod)
+    subTask.set("profile_name", profileName)
+    if (profileFile.isPresent) subTask.set("profile_file", profileFile.get())
+    subTask.set("use_http_proxy", useHttpProxy)
+    if (region.isPresent) subTask.set("region", region.get())
+    if (endpoint.isPresent) subTask.set("endpoint", endpoint.get())
+
+    subTask
+  }
 }
