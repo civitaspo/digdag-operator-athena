@@ -136,10 +136,6 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
           withS3(_.deleteObject(summary.getBucketName, summary.getKey))
         }
     }
-    if (!keepMetadata) {
-      logger.info(s"[$operatorName] Delete ${lastQuery.outputCsvMetadataUri.toString}.")
-      withS3(_.deleteObject(lastQuery.outputCsvMetadataUri.getBucket, lastQuery.outputCsvMetadataUri.getKey))
-    }
 
     logger.info(s"[$operatorName] Created ${lastQuery.outputCsvUri} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
     val p: Config = buildLastQueryParam(lastQuery)
@@ -147,7 +143,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     val builder = TaskResult.defaultBuilder(request)
     builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
     builder.storeParams(p)
-    if (preview) builder.subtaskConfig(buildPreviewSubTaskConfig(lastQuery))
+    builder.subtaskConfig(buildSubTaskConfig(lastQuery))
     builder.build()
   }
 
@@ -222,6 +218,23 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     lastQueryParam.set("completed_at", lastQuery.completedAt.getOrElse(Optional.absent()))
 
     ret
+  }
+
+  protected def buildSubTaskConfig(lastQuery: LastQuery): Config = {
+    val subTask: Config = cf.create()
+    val export: Config = subTask.getNestedOrSetEmpty("_export").getNestedOrSetEmpty("athena")
+
+    export.set("auth_method", authMethod)
+    export.set("profile_name", profileName)
+    if (profileFile.isPresent) export.set("profile_file", profileFile.get())
+    export.set("use_http_proxy", useHttpProxy)
+    if (region.isPresent) export.set("region", region.get())
+    if (endpoint.isPresent) export.set("endpoint", endpoint.get())
+
+    if (preview) subTask.setNested("+run-preview", buildPreviewSubTaskConfig(lastQuery))
+    if (!keepMetadata) subTask.setNested("+run-remove-matadata", buildRemoveMetadataSubTaskConfig(lastQuery))
+
+    subTask
   }
 
   protected def buildPreviewSubTaskConfig(lastQuery: LastQuery): Config = {
