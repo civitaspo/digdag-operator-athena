@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.0.4
+      - pro.civitaspo:digdag-operator-athena:0.0.5
   athena:
     auth_method: profile
 
@@ -85,12 +85,15 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **database**: The name of the database. (string, optional)
 - **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, required)
 - **keep_metadata**: Indicate whether to keep the metadata after executing the query. (boolean, default: `false`)
+  - **NOTE**: If **keep_metadata** is false, `athena.preview>` operator cannot be used except in this time, because athena [`GetQueryResults API`](https://docs.aws.amazon.com/athena/latest/APIReference/API_GetQueryResults.html) requires metadata.
 - **save_mode**: Specify the expected behavior of saving the query results. Available values are `"append"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
   - `"append"`: When saving the query results, even if other CSVs already exist, the query results are expected to be saved as another CSV.
   - `"error_if_exists"`: When saving the query results, if other CSVs already exists, an exception is expected to be thrown.
   - `"ignore"`: When saving the query results, if other CSVs already exists, the save operation is expected to not save the query results and to not change the existing data.    
   - `"overwrite"`: When saving the query results, if other CSVs already exist, existing data is expected to be overwritten by the query results. This operation is not atomic.
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
+- **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
+  - **NOTE**: If **keep_metadata** is false, `athena.preview>` operator cannot be used except in this time, because athena [`GetQueryResults API`](https://docs.aws.amazon.com/athena/latest/APIReference/API_GetQueryResults.html) requires metadata.
 
 ### Output Parameters
 
@@ -105,6 +108,28 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.last_query.submitted_at**: The unix timestamp that the query was submitted. (integer)
 - **athena.last_query.completed_at**: The unix timestamp that the query completed. (integer)
 
+## Configuration for `athena.preview>` operator
+
+### Options
+
+- **athena.preview>**: The identifier for the query execution that is succeeded. (string, required)
+- **max_rows**: The maximum number of rows to preview. 0 ~ 100 is valid. (integer, default: `10`)
+
+### Output Parameters
+
+- **athena.last_preview.id**: The identifier for the query execution. (string)
+- **athena.last_preview.columns**: The information that describes the column structure and data types of a table of query results. (map of array)
+  - **case_sensitive**: Indicates whether values in the column are case-sensitive. (boolean)
+  - **catalog**: The catalog to which the query results belong. (string)
+  - **label**: A column label. (string)
+  - **name**: The name of the column. (string)
+  - **nullable**: Indicates the column's nullable status. (one of `NOT_NULL`, `NULLABLE`, `UNKNOWN`)
+  - **precision**: For `DECIMAL` data types, specifies the total number of digits, up to 38. For performance reasons, we recommend up to 18 digits. (integer)
+  - **scale**: For `DECIMAL` data types, specifies the total number of digits in the fractional part of the value. Defaults to 0. (integer)
+  - **database**: The database name to which the query results belong. (string)
+  - **table**: The table name for the query results. (string)
+  - **type**: The data type of the column. (string)
+- **athena.last_preview.rows**: The rows in the preview results. (array of array)
 
 # Development
 
