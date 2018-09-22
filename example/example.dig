@@ -15,5 +15,5 @@ _export:
   athena.query>: template.sql
 
 +step2:
-  echo>: ${athena.last_query}
+  echo>: ${athena}
 
