@@ -8,8 +8,8 @@ import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-class AthenaPreviewOperator (operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
-  extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
+class AthenaPreviewOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
+    extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
 
   protected val execId: String = params.get("_command", classOf[String])
   protected val maxRows: Int = params.get("max_rows", classOf[Int], 10)
