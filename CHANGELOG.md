@@ -1,3 +1,10 @@
+0.0.5 (2018-09-23)
+==================
+
+* [New Feature] Add `athena.preview` operator
+* [New Feature] Add `preview` option for `athena.query` operator. This option is true, then run `athena.preview` operator after `athena.query` is executed.
+* [Enhancement] Add `athena.remove_metadata` operator for internal use. `athena.query` execute this when `keep_metadata` is false after `athena.preview` operator because `athena.preview` requires matadata.
+
 0.0.4 (2018-08-13)
 ==================
 
