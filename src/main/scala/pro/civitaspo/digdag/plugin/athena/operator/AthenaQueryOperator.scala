@@ -91,8 +91,20 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     val o = params.get("output", classOf[String])
     AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
   }
-  protected val keepMetadata: Boolean = params.get("keep_metadata", classOf[Boolean], false)
-  protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
+
+  @deprecated protected val keepMetadata: Boolean = {
+    logger.warn(
+      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'keep_metadata' option will be removed and the default behaviour will become the same as `keep_metadata: true` (the current default behaviour is the same as `keep_metadata: false`) because this option was added for that the metadata file is obstructive when using the output csv as another table."
+    )
+    params.get("keep_metadata", classOf[Boolean], false)
+  }
+
+  @deprecated protected val saveMode: SaveMode = {
+    logger.warn(
+      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: ignore` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table."
+    )
+    SaveMode(params.get("save_mode", classOf[String], "overwrite"))
+  }
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
   protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
 
