@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.athena.operator
 import java.io.File
 import java.nio.charset.StandardCharsets.UTF_8
 
+import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{QueryExecution, QueryExecutionState}
 import com.amazonaws.services.s3.AmazonS3URI
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
@@ -112,6 +113,12 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
       workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
     }
     t.getOrElse(selectQueryOrFile)
+  }
+
+  protected lazy val queryResultsDefaultBucket: String = {
+    val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+    val r = region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+    s"s3://aws-athena-query-results-$accountId-$r"
   }
 
   override def runTask(): TaskResult = {
