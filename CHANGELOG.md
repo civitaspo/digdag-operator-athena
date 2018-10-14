@@ -1,3 +1,8 @@
+0.0.6 (2018-10-14)
+==================
+
+* [Deprecated] Add warning messages for **keep_metadata** and **save_mode** for `athena.query` operator.
+
 0.0.5 (2018-09-23)
 ==================
 
