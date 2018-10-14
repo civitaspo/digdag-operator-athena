@@ -101,7 +101,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
 
   @deprecated protected val saveMode: SaveMode = {
     logger.warn(
-      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: ignore` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table."
+      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: append` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table."
     )
     SaveMode(params.get("save_mode", classOf[String], "overwrite"))
   }
