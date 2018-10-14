@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.0.5
+      - pro.civitaspo:digdag-operator-athena:0.0.6
   athena:
     auth_method: profile
 
@@ -92,7 +92,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"error_if_exists"`: When saving the query results, if other CSVs already exists, an exception is expected to be thrown.
   - `"ignore"`: When saving the query results, if other CSVs already exists, the save operation is expected to not save the query results and to not change the existing data.    
   - `"overwrite"`: When saving the query results, if other CSVs already exist, existing data is expected to be overwritten by the query results. This operation is not atomic.
-  - **NOTE**: [Athena supports CTAS](https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/), so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: ignore` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table.
+  - **NOTE**: [Athena supports CTAS](https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/), so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: append` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table.
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
   - **NOTE**: If **keep_metadata** is false, `athena.preview>` operator cannot be used except in this time, because athena [`GetQueryResults API`](https://docs.aws.amazon.com/athena/latest/APIReference/API_GetQueryResults.html) requires metadata.
