@@ -84,18 +84,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
 - **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, required)
-- **keep_metadata**: Indicate whether to keep the metadata after executing the query. (boolean, default: `false`)
-  - **NOTE**: If **keep_metadata** is false, `athena.preview>` operator cannot be used except in this time, because athena [`GetQueryResults API`](https://docs.aws.amazon.com/athena/latest/APIReference/API_GetQueryResults.html) requires metadata.
-  - **NOTE**: [Athena supports CTAS](https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/), so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'keep_metadata' option will be removed and the default behaviour will become the same as `keep_metadata: true` (the current default behaviour is the same as `keep_metadata: false`) because this option was added for that the metadata file is obstructive when using the output csv as another table.
-- **save_mode**: Specify the expected behavior of saving the query results. Available values are `"append"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
-  - `"append"`: When saving the query results, even if other CSVs already exist, the query results are expected to be saved as another CSV.
-  - `"error_if_exists"`: When saving the query results, if other CSVs already exists, an exception is expected to be thrown.
-  - `"ignore"`: When saving the query results, if other CSVs already exists, the save operation is expected to not save the query results and to not change the existing data.    
-  - `"overwrite"`: When saving the query results, if other CSVs already exist, existing data is expected to be overwritten by the query results. This operation is not atomic.
-  - **NOTE**: [Athena supports CTAS](https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/), so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: append` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table.
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
-  - **NOTE**: If **keep_metadata** is false, `athena.preview>` operator cannot be used except in this time, because athena [`GetQueryResults API`](https://docs.aws.amazon.com/athena/latest/APIReference/API_GetQueryResults.html) requires metadata.
 
 ### Output Parameters
 
