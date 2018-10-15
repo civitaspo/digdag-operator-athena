@@ -1,12 +1,12 @@
 package pro.civitaspo.digdag.plugin.athena
 
-import java.util.{Arrays => JArrays, List => JList}
 import java.lang.reflect.Constructor
+import java.util.{Arrays => JArrays, List => JList}
 
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
-import pro.civitaspo.digdag.plugin.athena.operator.{AbstractAthenaOperator, AthenaPreviewOperator, AthenaQueryOperator, AthenaRemoveMetadataOperator}
+import pro.civitaspo.digdag.plugin.athena.operator.{AbstractAthenaOperator, AthenaPreviewOperator, AthenaQueryOperator}
 
 object AthenaPlugin {
 
@@ -16,11 +16,7 @@ object AthenaPlugin {
     @Inject protected var templateEngine: TemplateEngine = null
 
     override def get(): JList[OperatorFactory] = {
-      JArrays.asList(
-        operatorFactory("athena.query", classOf[AthenaQueryOperator]),
-        operatorFactory("athena.preview", classOf[AthenaPreviewOperator]),
-        operatorFactory("athena.remove_metadata", classOf[AthenaRemoveMetadataOperator])
-      )
+      JArrays.asList(operatorFactory("athena.query", classOf[AthenaQueryOperator]), operatorFactory("athena.preview", classOf[AthenaPreviewOperator]))
     }
 
     private def operatorFactory[T <: AbstractAthenaOperator](operatorName: String, klass: Class[T]): OperatorFactory = {
