@@ -152,16 +152,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Output Parameters
 
-- **athena.last_ctas_query.id**: The unique identifier for each query execution. (string)
-- **athena.last_ctas_query.database**: The name of the database. (string)
-- **athena.last_ctas_query.query**: The SQL query statements which the query execution ran. (string)
-- **athena.last_ctas_query.output**: The location in Amazon S3 where your query results are stored. (string)
-- **athena.last_ctas_query.scan_bytes**: The number of bytes in the data that was queried. (long)
-- **athena.last_ctas_query.exec_millis**: The number of milliseconds that the query took to execute. (long)
-- **athena.last_ctas_query.state**: The state of query execution. SUBMITTED indicates that the query is queued for execution. RUNNING indicates that the query is scanning data and returning results. SUCCEEDED indicates that the query completed without error. FAILED indicates that the query experienced an error and did not complete processing. CANCELLED indicates that user input interrupted query execution. (string)
-- **athena.last_ctas_query.state_change_reason**: Further detail about the status of the query. (string)
-- **athena.last_ctas_query.submitted_at**: The unix timestamp that the query was submitted. (integer)
-- **athena.last_ctas_query.completed_at**: The unix timestamp that the query completed. (integer) 
+Nothing
 
 # Development
 
