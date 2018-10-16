@@ -31,7 +31,7 @@ import scala.util.Try
 abstract class AbstractAthenaOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends BaseOperator(context) {
 
-  protected val logger: Logger = LoggerFactory.getLogger(this.getClass) // TODO: use operatorName
+  protected val logger: Logger = LoggerFactory.getLogger(operatorName)
   protected val cf: ConfigFactory = request.getConfig.getFactory
   protected val params: Config = {
     val elems: Seq[String] = operatorName.split("\\.")
