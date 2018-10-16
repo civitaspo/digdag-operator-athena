@@ -34,8 +34,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     id: String,
     database: Option[String] = None,
     query: String,
-    outputCsvUri: AmazonS3URI,
-    outputCsvMetadataUri: AmazonS3URI,
+    output: AmazonS3URI,
     scanBytes: Option[Long] = None,
     execMillis: Option[Long] = None,
     state: QueryExecutionState,
@@ -51,8 +50,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
         id = qe.getQueryExecutionId,
         database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
         query = qe.getQuery,
-        outputCsvUri = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
-        outputCsvMetadataUri = AmazonS3URI(s"${qe.getResultConfiguration.getOutputLocation}.metadata"),
+        output = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
         scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
         execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
         state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -102,8 +100,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     val execId: String = startQueryExecution
     val lastQuery: LastQuery = pollingQueryExecution(execId)
 
-    // TODO: Change outputCsvUri,
-    logger.info(s"[$operatorName] Created ${lastQuery.outputCsvUri} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
+    logger.info(s"[$operatorName] Created ${lastQuery.output} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
     val p: Config = buildLastQueryParam(lastQuery)
 
     val builder = TaskResult.defaultBuilder(request)
@@ -175,7 +172,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     lastQueryParam.set("id", lastQuery.id)
     lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
     lastQueryParam.set("query", lastQuery.query)
-    lastQueryParam.set("output", lastQuery.outputCsvUri.toString) // TODO: It's not always csv, so should change.
+    lastQueryParam.set("output", lastQuery.output.toString) // TODO: It's not always csv, so should change.
     lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))
     lastQueryParam.set("exec_millis", lastQuery.execMillis.getOrElse(Optional.absent()))
     lastQueryParam.set("state", lastQuery.state)
