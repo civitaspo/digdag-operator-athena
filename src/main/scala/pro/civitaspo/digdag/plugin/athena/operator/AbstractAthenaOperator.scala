@@ -105,7 +105,7 @@ abstract class AbstractAthenaOperator(operatorName: String, context: OperatorCon
       .build()
   }
 
-  private def configureBuilderEndpointConfiguration[S, T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] = {
+  private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] = {
     if (region.isPresent && endpoint.isPresent) {
       val ec = new EndpointConfiguration(endpoint.get(), region.get())
       builder.setEndpointConfiguration(ec)
