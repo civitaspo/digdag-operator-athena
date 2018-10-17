@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.athena.operator
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
+import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{
   GetQueryExecutionRequest,
   QueryExecution,
@@ -13,6 +14,7 @@ import com.amazonaws.services.athena.model.{
 }
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -64,11 +66,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val queryOrFile: String = params.get("_command", classOf[String])
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val output: AmazonS3URI = {
-    // TODO: to optional
-    val o = params.get("output", classOf[String])
-    AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
-  }
+  protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
   protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
 
@@ -83,6 +81,17 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected lazy val clientRequestToken: String = {
     val queryHash: Int = MurmurHash3.bytesHash(query.getBytes(UTF_8), 0)
     s"$tokenPrefix-$sessionUuid-$queryHash"
+  }
+
+  protected lazy val output: AmazonS3URI = {
+    AmazonS3URI {
+      if (outputOptional.isPresent) outputOptional.get()
+      else {
+        val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+        val r = region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+        s"s3://aws-athena-query-results-$accountId-$r"
+      }
+    }
   }
 
   @deprecated private def showMessageIfUnsupportedOptionExists() = {
