@@ -58,7 +58,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
   protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
   protected val table: String = params.get("table", classOf[String], s"digdag-athena-ctas-$sessionUuid")
-  protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
+  protected val output: Optional[String] = params.getOptional("output", classOf[String])
   protected val format: String = params.get("format", classOf[String], "parquet")
   protected val compression: String = params.get("compression", classOf[String], "snappy")
   protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
@@ -85,7 +85,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
 
   protected def generateCtasQuery(): String = {
     val propsBuilder = Map.newBuilder[String, String]
-    if (outputOptional.isPresent) propsBuilder += ("external_location" -> s"'${ outputOptional.get}'")
+    if (output.isPresent) propsBuilder += ("external_location" -> s"'${output.get}'")
     propsBuilder += ("format" -> s"'$format'")
     format match {
       case "parquet" => propsBuilder += ("parquet_compression" -> s"'$compression'")
