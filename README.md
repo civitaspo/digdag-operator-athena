@@ -138,11 +138,11 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **bucketed_by**: An array list of buckets to bucket data. If omitted, Athena does not bucket your data in this query. (array of string, optional)
 - **bucket_count**: The number of buckets for bucketing your data. If omitted, Athena does not bucket your data. (integer, optional)
 - **additional_properties**: Additional properties for CTAS. These are used for CTAS WITH clause without escaping. (string to string map, optional)
-- **save_mode**: Specify the expected behavior of saving CTAS results. Available values are `"default"`, `"empty_table"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
+- **table_mode**: Specify the expected behavior of CTAS results. Available values are `"default"`, `"empty"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
   - `"default"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
   - `"empty_table"`: Create a new empty table with the same schema as the select query results.
   - `"data_only"`:
-- **query_mode**: Specify the expected behavior of CTAS query. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
+- **save_mode**: Specify the expected behavior of CTAS. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
   - `"none"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
   - `"error_if_exists"`: Raise error if the distination table or location exists.
   - `"ignore"`: Skip CTAS query if the distination table or location exists.

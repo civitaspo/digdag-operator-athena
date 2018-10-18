@@ -19,38 +19,38 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     def apply(path: String): AmazonS3URI = new AmazonS3URI(path, false)
   }
 
-  sealed abstract class SaveMode
+  sealed abstract class TableMode
 
-  object SaveMode {
-    final case object Default extends SaveMode
-    final case object EmptyTable extends SaveMode
-    final case object DataOnly extends SaveMode
+  object TableMode {
+    final case object Default extends TableMode
+    final case object Empty extends TableMode
+    final case object DataOnly extends TableMode
 
-    def apply(mode: String): SaveMode = {
+    def apply(mode: String): TableMode = {
       mode match {
         case "default" => Default
-        case "empty_table" => EmptyTable
+        case "empty" => Empty
         case "data_only" => DataOnly
-        case unknown => throw new ConfigException(s"[$operatorName] save_mode '$unknown' is unsupported.")
+        case unknown => throw new ConfigException(s"[$operatorName] table_mode '$unknown' is unsupported.")
       }
     }
   }
 
-  sealed abstract class QueryMode
+  sealed abstract class SaveMode
 
-  object QueryMode {
-    final case object None extends QueryMode
-    final case object ErrorIfExists extends QueryMode
-    final case object Ignore extends QueryMode
-    final case object Overwrite extends QueryMode
+  object SaveMode {
+    final case object None extends SaveMode
+    final case object ErrorIfExists extends SaveMode
+    final case object Ignore extends SaveMode
+    final case object Overwrite extends SaveMode
 
-    def apply(mode: String): QueryMode = {
+    def apply(mode: String): SaveMode = {
       mode match {
         case "none" => None
         case "error_if_exists" => ErrorIfExists
         case "ignore" => Ignore
         case "overwrite" => Overwrite
-        case unknown => throw new ConfigException(s"[$operatorName] query_mode '$unknown' is unsupported.")
+        case unknown => throw new ConfigException(s"[$operatorName] save_mode '$unknown' is unsupported.")
       }
     }
   }
@@ -66,8 +66,8 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
   protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala
   protected val bucketCount: Optional[Int] = params.getOptional("bucket_count", classOf[Int])
   protected val additionalProperties: Map[String, String] = params.getMapOrEmpty("additional_properties", classOf[String], classOf[String]).asScala.toMap
-  protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "default"))
-  protected val queryMode: QueryMode = QueryMode(params.get("query_mode", classOf[String], "overwrite"))
+  protected val tableMode: TableMode = TableMode(params.get("table_mode", classOf[String], "default"))
+  protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena-ctas")
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
 
@@ -102,12 +102,12 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     if (additionalProperties.nonEmpty) propsBuilder ++= additionalProperties
 
     val propStr: String = propsBuilder.result().map { case (k, v) => s"$k = $v" }.mkString(",\n")
-    val createTableClause: String = queryMode match {
-      case QueryMode.Ignore => "CREATE TABLE IF NOT EXISTS"
+    val createTableClause: String = saveMode match {
+      case SaveMode.Ignore => "CREATE TABLE IF NOT EXISTS"
       case _ => "CREATE TABLE"
     }
-    val dataHint: String = saveMode match {
-      case SaveMode.EmptyTable => "WITH NO DATA"
+    val dataHint: String = tableMode match {
+      case TableMode.Empty => "WITH NO DATA"
       case _ => "WITH DATA"
     }
 
