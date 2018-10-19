@@ -15,17 +15,21 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.0.6
+      - pro.civitaspo:digdag-operator-athena:0.1.0
   athena:
     auth_method: profile
 
 +step1:
   athena.query>: template.sql
-  output: s3://mybucket/prefix/
 
 +step2:
   echo>: ${athena.last_query}
 
++stap3:
+  athena.ctas>:
+  select_query: template.sql
+  table: hoge
+  output: s3://mybucket/prefix/
 ```
 
 # Configuration
