@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.athena.operator
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
+import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{
   GetQueryExecutionRequest,
   QueryExecution,
@@ -13,6 +14,7 @@ import com.amazonaws.services.athena.model.{
 }
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -34,8 +36,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     id: String,
     database: Option[String] = None,
     query: String,
-    outputCsvUri: AmazonS3URI,
-    outputCsvMetadataUri: AmazonS3URI,
+    output: AmazonS3URI,
     scanBytes: Option[Long] = None,
     execMillis: Option[Long] = None,
     state: QueryExecutionState,
@@ -51,8 +52,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
         id = qe.getQueryExecutionId,
         database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
         query = qe.getQuery,
-        outputCsvUri = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
-        outputCsvMetadataUri = AmazonS3URI(s"${qe.getResultConfiguration.getOutputLocation}.metadata"),
+        output = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
         scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
         execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
         state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -66,11 +66,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val queryOrFile: String = params.get("_command", classOf[String])
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val output: AmazonS3URI = {
-    // TODO: to optional
-    val o = params.get("output", classOf[String])
-    AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
-  }
+  @deprecated protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
   protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
 
@@ -87,12 +83,26 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     s"$tokenPrefix-$sessionUuid-$queryHash"
   }
 
-  @deprecated private def showMessageIfUnsupportedOptionExists() = {
+  protected lazy val output: AmazonS3URI = {
+    AmazonS3URI {
+      if (outputOptional.isPresent) outputOptional.get()
+      else {
+        val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+        val r = region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+        s"s3://aws-athena-query-results-$accountId-$r"
+      }
+    }
+  }
+
+  @deprecated private def showMessageIfUnsupportedOptionExists(): Unit = {
     if (params.getOptional("keep_metadata", classOf[Boolean]).isPresent) {
       logger.warn("`keep_metadata` option has removed, and the behaviour is the same as `keep_metadata: true`.")
     }
     if (params.getOptional("save_mode", classOf[String]).isPresent) {
       logger.warn("`save_mode` option has removed, and the behaviour is the same as `save_mode: append` .")
+    }
+    if (outputOptional.isPresent) {
+      logger.warn("`output` option will be removed, and the current default value will be always used.")
     }
   }
 
@@ -102,8 +112,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     val execId: String = startQueryExecution
     val lastQuery: LastQuery = pollingQueryExecution(execId)
 
-    // TODO: Change outputCsvUri,
-    logger.info(s"[$operatorName] Created ${lastQuery.outputCsvUri} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
+    logger.info(s"[$operatorName] Executed ${lastQuery.id} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
     val p: Config = buildLastQueryParam(lastQuery)
 
     val builder = TaskResult.defaultBuilder(request)
@@ -175,7 +184,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     lastQueryParam.set("id", lastQuery.id)
     lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
     lastQueryParam.set("query", lastQuery.query)
-    lastQueryParam.set("output", lastQuery.outputCsvUri.toString) // TODO: It's not always csv, so should change.
+    lastQueryParam.set("output", lastQuery.output.toString) // TODO: It's not always csv, so should change.
     lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))
     lastQueryParam.set("exec_millis", lastQuery.execMillis.getOrElse(Optional.absent()))
     lastQueryParam.set("state", lastQuery.state)

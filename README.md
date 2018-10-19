@@ -83,7 +83,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.query>**: The SQL query statements or file to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
-- **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, required)
+- **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
 
@@ -122,6 +122,37 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - **table**: The table name for the query results. (string)
   - **type**: The data type of the column. (string)
 - **athena.last_preview.rows**: The rows in the preview results. (array of array)
+
+## Configuration for `athena.ctas>` operator
+
+### Options
+
+- **select_query**: The select SQL statements or file to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
+- **database**: The database name for query execution context. (string, optional)
+- **table**: The table name for the new table (string, default: `digdag-athena-ctas-${session_uuid}`)
+- **output**: Output location for data created by CTAS (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>/Unsaved/${YEAR}/${MONTH}/${DAY}/${athena_query_id}/"`)
+- **format**: The data format for the CTAS query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: `"parquet"`)
+- **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: `"snappy"`)
+- **field_delimiter**: The field delimiter for files in CSV, TSV, and text files. This option is applied only when **format** is specific to text-based data storage formats. (string, optional)
+- **partitioned_by**: An array list of columns by which the CTAS table will be partitioned. Verify that the names of partitioned columns are listed last in the list of columns in the SELECT statement. (array of string, optional)
+- **bucketed_by**: An array list of buckets to bucket data. If omitted, Athena does not bucket your data in this query. (array of string, optional)
+- **bucket_count**: The number of buckets for bucketing your data. If omitted, Athena does not bucket your data. (integer, optional)
+- **additional_properties**: Additional properties for CTAS. These are used for CTAS WITH clause without escaping. (string to string map, optional)
+- **table_mode**: Specify the expected behavior of CTAS results. Available values are `"default"`, `"empty"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
+  - `"default"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
+  - `"empty_table"`: Create a new empty table with the same schema as the select query results.
+  - `"data_only"`:
+- **save_mode**: Specify the expected behavior of CTAS. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
+  - `"none"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
+  - `"error_if_exists"`: Raise error if the distination table or location exists.
+  - `"ignore"`: Skip CTAS query if the distination table or location exists.
+  - `"overwrite"`: Drop the distination table and remove objects before executing CTAS. This operation is not atomic.
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena-ctas"`)
+- **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
+
+### Output Parameters
+
+Nothing
 
 # Development
 

@@ -1,1 +1,1 @@
-select ${value}
+select ${value} as a

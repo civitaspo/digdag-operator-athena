@@ -7,13 +7,18 @@ _export:
       - pro.civitaspo:digdag-operator-athena:0.0.6
   athena:
     auth_method: profile
-    query:
-      output: ${output}
-      value: 5
+    value: 5
 
 +step1:
   athena.query>: template.sql
 
 +step2:
   echo>: ${athena}
+
++stap3:
+  athena.ctas>:
+  select_query: template.sql
+  database: ${database}
+  table: hoge
+  output: ${output}
 
