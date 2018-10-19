@@ -171,6 +171,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     if (database.isPresent) subTask.set("database", database)
     subTask.set("timeout", timeout.toString)
     subTask.set("preview", false)
+    subTask.set("output", Optional.absent())
 
     subTask.set("auth_method", authMethod)
     subTask.set("profile_name", profileName)
