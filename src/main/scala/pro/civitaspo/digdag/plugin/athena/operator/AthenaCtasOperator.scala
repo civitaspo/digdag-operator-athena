@@ -110,7 +110,8 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
 
   protected def rmObjects(location: String): Unit = {
     val uri: AmazonS3URI = AmazonS3URI(location)
-    val r: DeleteObjectsResult = withS3(_.deleteObjects(new DeleteObjectsRequest(uri.getBucket).withKeys(uri.getKey)))
+    val keys: Seq[String] = withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.asScala.map(_.getKey)
+    val r: DeleteObjectsResult = withS3(_.deleteObjects(new DeleteObjectsRequest(uri.getBucket).withKeys(keys: _*)))
     r.getDeletedObjects.asScala.foreach(o => logger.info(s"Deleted: s3://${uri.getBucket}/${o.getKey}"))
   }
 
