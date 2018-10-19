@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.amazonaws.services.s3.AmazonS3URI
+import com.amazonaws.services.s3.model.{DeleteObjectsRequest, DeleteObjectsResult}
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
@@ -80,7 +81,29 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
   }
 
   override def runTask(): TaskResult = {
+    saveMode match {
+      case SaveMode.ErrorIfExists if output.isPresent && hasObjects(output.get) =>
+        throw new IllegalStateException(s"${output.get} already exists")
+      case SaveMode.Ignore if output.isPresent && hasObjects(output.get) =>
+        logger.info(s"${output.get} already exists, so ignore this session.")
+        return TaskResult.empty(request)
+      case SaveMode.Overwrite if output.isPresent =>
+        logger.info(s"Overwrite ${output.get}")
+        rmObjects(output.get)
+      case _ => // do nothing
+    }
     null
+  }
+
+  protected def hasObjects(location: String): Boolean = {
+    val uri: AmazonS3URI = AmazonS3URI(location)
+    !withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.isEmpty
+  }
+
+  protected def rmObjects(location: String): Unit = {
+    val uri: AmazonS3URI = AmazonS3URI(location)
+    val r: DeleteObjectsResult = withS3(_.deleteObjects(new DeleteObjectsRequest(uri.getBucket).withKeys(uri.getKey)))
+    r.getDeletedObjects.asScala.foreach(o => logger.info(s"Deleted: s3://${uri.getBucket}/${o.getKey}"))
   }
 
   protected def generateCtasQuery(): String = {
