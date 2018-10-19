@@ -7,7 +7,7 @@ import com.amazonaws.services.s3.AmazonS3URI
 import com.amazonaws.services.s3.model.{DeleteObjectsRequest, DeleteObjectsResult}
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
-import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
+import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
@@ -92,7 +92,15 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
         rmObjects(output.get)
       case _ => // do nothing
     }
-    null
+
+    val subTask: Config = cf.create()
+    if (saveMode.equals(SaveMode.Overwrite)) subTask.setNested("+drop-before-ctas", buildQuerySubTaskConfig(generateDropTableQuery()))
+    subTask.setNested("+ctas", buildQuerySubTaskConfig(generateCtasQuery()))
+    if (tableMode.equals(TableMode.DataOnly)) subTask.setNested("+drop-after-ctas", buildQuerySubTaskConfig(generateDropTableQuery()))
+
+    val builder: ImmutableTaskResult.Builder = TaskResult.builder()
+    builder.subtaskConfig(subTask)
+    builder.build()
   }
 
   protected def hasObjects(location: String): Boolean = {
