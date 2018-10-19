@@ -142,7 +142,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
        | AS
        | $selectQuery
        | $dataHint
-     """.stripMargin
+       | """.stripMargin
   }
 
   protected def buildDropTableSubTaskConfig(): Config = {
