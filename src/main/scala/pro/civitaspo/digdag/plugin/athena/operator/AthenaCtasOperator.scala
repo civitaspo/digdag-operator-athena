@@ -161,6 +161,8 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
   }
 
   protected def buildQuerySubTaskConfig(query: String): Config = {
+    logger.info(s"Will execute query in athena.query>: $query")
+
     val subTask: Config = cf.create()
 
     subTask.set("_type", "athena.query")
