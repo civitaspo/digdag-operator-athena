@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'pro.civitaspo'
-version = '0.0.6'
+version = '0.1.0'
 
 def digdagVersion = '0.9.27'
 def awsSdkVersion = "1.11.372"

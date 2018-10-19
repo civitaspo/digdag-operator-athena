@@ -13,11 +13,12 @@ import com.amazonaws.auth.{
   SystemPropertiesCredentialsProvider
 }
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
+import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException, ConfigFactory}
@@ -30,7 +31,7 @@ import scala.util.Try
 abstract class AbstractAthenaOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends BaseOperator(context) {
 
-  protected val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  protected val logger: Logger = LoggerFactory.getLogger(operatorName)
   protected val cf: ConfigFactory = request.getConfig.getFactory
   protected val params: Config = {
     val elems: Seq[String] = operatorName.split("\\.")
@@ -77,34 +78,34 @@ abstract class AbstractAthenaOperator(operatorName: String, context: OperatorCon
     finally s3.shutdown()
   }
 
+  protected def withSts[T](f: AWSSecurityTokenService => T): T = {
+    val sts = buildSts
+    try f(sts)
+    finally sts.shutdown()
+  }
+
   private def buildAthena: AmazonAthena = {
-    val builder = AmazonAthenaClientBuilder
-      .standard()
+    configureBuilderEndpointConfiguration(AmazonAthenaClientBuilder.standard())
       .withClientConfiguration(clientConfiguration)
       .withCredentials(credentialsProvider)
-
-    if (region.isPresent && endpoint.isPresent) {
-      val ec = new EndpointConfiguration(endpoint.get(), region.get())
-      builder.setEndpointConfiguration(ec)
-    }
-    else if (region.isPresent && !endpoint.isPresent) {
-      builder.setRegion(region.get())
-    }
-    else if (!region.isPresent && endpoint.isPresent) {
-      val r = Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName)
-      val ec = new EndpointConfiguration(endpoint.get(), r)
-      builder.setEndpointConfiguration(ec)
-    }
-
-    builder.build()
+      .build()
   }
 
   private def buildS3: AmazonS3 = {
-    val builder = AmazonS3ClientBuilder
-      .standard()
+    configureBuilderEndpointConfiguration(AmazonS3ClientBuilder.standard())
       .withClientConfiguration(clientConfiguration)
       .withCredentials(credentialsProvider)
+      .build()
+  }
 
+  private def buildSts: AWSSecurityTokenService = {
+    configureBuilderEndpointConfiguration(AWSSecurityTokenServiceClientBuilder.standard())
+      .withClientConfiguration(clientConfiguration)
+      .withCredentials(credentialsProvider)
+      .build()
+  }
+
+  private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] = {
     if (region.isPresent && endpoint.isPresent) {
       val ec = new EndpointConfiguration(endpoint.get(), region.get())
       builder.setEndpointConfiguration(ec)
@@ -117,8 +118,7 @@ abstract class AbstractAthenaOperator(operatorName: String, context: OperatorCon
       val ec = new EndpointConfiguration(endpoint.get(), r)
       builder.setEndpointConfiguration(ec)
     }
-
-    builder.build()
+    builder
   }
 
   private def credentialsProvider: AWSCredentialsProvider = {

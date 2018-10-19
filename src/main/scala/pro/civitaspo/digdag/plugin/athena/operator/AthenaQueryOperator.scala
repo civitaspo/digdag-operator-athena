@@ -3,6 +3,7 @@ package pro.civitaspo.digdag.plugin.athena.operator
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
+import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{
   GetQueryExecutionRequest,
   QueryExecution,
@@ -13,15 +14,14 @@ import com.amazonaws.services.athena.model.{
 }
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
-import com.amazonaws.services.s3.model.S3ObjectSummary
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
-import io.digdag.client.config.{Config, ConfigException, ConfigKey}
+import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 
-import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.hashing.MurmurHash3
 
@@ -32,31 +32,11 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     def apply(path: String): AmazonS3URI = new AmazonS3URI(path, false)
   }
 
-  sealed abstract class SaveMode
-
-  object SaveMode {
-    final case object Append extends SaveMode
-    final case object ErrorIfExists extends SaveMode
-    final case object Ignore extends SaveMode
-    final case object Overwrite extends SaveMode
-
-    def apply(mode: String): SaveMode = {
-      mode match {
-        case "append" => Append
-        case "error_if_exists" => ErrorIfExists
-        case "ignore" => Ignore
-        case "overwrite" => Overwrite
-        case unknown => throw new ConfigException(s"[$operatorName] save mode '$unknown' is unsupported.")
-      }
-    }
-  }
-
   case class LastQuery(
     id: String,
     database: Option[String] = None,
     query: String,
-    outputCsvUri: AmazonS3URI,
-    outputCsvMetadataUri: AmazonS3URI,
+    output: AmazonS3URI,
     scanBytes: Option[Long] = None,
     execMillis: Option[Long] = None,
     state: QueryExecutionState,
@@ -72,8 +52,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
         id = qe.getQueryExecutionId,
         database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
         query = qe.getQuery,
-        outputCsvUri = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
-        outputCsvMetadataUri = AmazonS3URI(s"${qe.getResultConfiguration.getOutputLocation}.metadata"),
+        output = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
         scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
         execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
         state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -87,24 +66,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val queryOrFile: String = params.get("_command", classOf[String])
   protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val output: AmazonS3URI = {
-    val o = params.get("output", classOf[String])
-    AmazonS3URI(if (o.endsWith("/")) o else s"$o/")
-  }
-
-  @deprecated protected val keepMetadata: Boolean = {
-    logger.warn(
-      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'keep_metadata' option will be removed and the default behaviour will become the same as `keep_metadata: true` (the current default behaviour is the same as `keep_metadata: false`) because this option was added for that the metadata file is obstructive when using the output csv as another table."
-    )
-    params.get("keep_metadata", classOf[Boolean], false)
-  }
-
-  @deprecated protected val saveMode: SaveMode = {
-    logger.warn(
-      "Athena supports CTAS, so digdag-operator-athena will support it as `athena.ctas>` operator. After that, 'save_mode' option will be removed and the behaviour will become the same as `save_mode: append` (the current default behaviour is the same as `save_mode: overwrite`) because this option was added for that lots of duplicated output csv files which are created by other executions are sometimes obstructive when using the output csv as another table."
-    )
-    SaveMode(params.get("save_mode", classOf[String], "overwrite"))
-  }
+  @deprecated protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
   protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
 
@@ -121,41 +83,42 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     s"$tokenPrefix-$sessionUuid-$queryHash"
   }
 
-  override def runTask(): TaskResult = {
-    saveMode match {
-      case SaveMode.ErrorIfExists =>
-        val result = withS3(_.listObjectsV2(output.getBucket, output.getKey))
-        if (!result.getObjectSummaries.isEmpty) throw new IllegalStateException(s"[$operatorName] some objects already exists in `$output`.")
-      case SaveMode.Ignore =>
-        val result = withS3(_.listObjectsV2(output.getBucket, output.getKey))
-        if (!result.getObjectSummaries.isEmpty) {
-          logger.info(s"[$operatorName] some objects already exists in $output so do nothing in this session: `$sessionUuid`.")
-          val builder = TaskResult.defaultBuilder(request)
-          builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
-          return builder.build()
-        }
-      case _ => // do nothing
+  protected lazy val output: AmazonS3URI = {
+    AmazonS3URI {
+      if (outputOptional.isPresent) outputOptional.get()
+      else {
+        val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+        val r = region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+        s"s3://aws-athena-query-results-$accountId-$r"
+      }
     }
+  }
+
+  @deprecated private def showMessageIfUnsupportedOptionExists(): Unit = {
+    if (params.getOptional("keep_metadata", classOf[Boolean]).isPresent) {
+      logger.warn("`keep_metadata` option has removed, and the behaviour is the same as `keep_metadata: true`.")
+    }
+    if (params.getOptional("save_mode", classOf[String]).isPresent) {
+      logger.warn("`save_mode` option has removed, and the behaviour is the same as `save_mode: append` .")
+    }
+    if (outputOptional.isPresent) {
+      logger.warn("`output` option will be removed, and the current default value will be always used.")
+    }
+  }
+
+  override def runTask(): TaskResult = {
+    showMessageIfUnsupportedOptionExists()
 
     val execId: String = startQueryExecution
     val lastQuery: LastQuery = pollingQueryExecution(execId)
 
-    if (saveMode.equals(SaveMode.Overwrite)) {
-      withS3(_.listObjectsV2(output.getBucket, output.getKey)).getObjectSummaries.asScala
-        .filterNot(_.getKey.startsWith(lastQuery.outputCsvUri.getKey)) // filter output.csv and output.csv.metadata
-        .foreach { summary: S3ObjectSummary =>
-          logger.info(s"[$operatorName] Delete s3://${summary.getBucketName}/${summary.getKey}")
-          withS3(_.deleteObject(summary.getBucketName, summary.getKey))
-        }
-    }
-
-    logger.info(s"[$operatorName] Created ${lastQuery.outputCsvUri} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
+    logger.info(s"[$operatorName] Executed ${lastQuery.id} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
     val p: Config = buildLastQueryParam(lastQuery)
 
     val builder = TaskResult.defaultBuilder(request)
     builder.resetStoreParams(ImmutableList.of(ConfigKey.of("athena", "last_query")))
     builder.storeParams(p)
-    builder.subtaskConfig(buildSubTaskConfig(lastQuery))
+    if (preview) builder.subtaskConfig(buildPreviewSubTaskConfig(lastQuery))
     builder.build()
   }
 
@@ -221,7 +184,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     lastQueryParam.set("id", lastQuery.id)
     lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
     lastQueryParam.set("query", lastQuery.query)
-    lastQueryParam.set("output", lastQuery.outputCsvUri.toString)
+    lastQueryParam.set("output", lastQuery.output.toString) // TODO: It's not always csv, so should change.
     lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))
     lastQueryParam.set("exec_millis", lastQuery.execMillis.getOrElse(Optional.absent()))
     lastQueryParam.set("state", lastQuery.state)
@@ -232,43 +195,11 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     ret
   }
 
-  protected def buildSubTaskConfig(lastQuery: LastQuery): Config = {
-    val subTask: Config = cf.create()
-    val export: Config = subTask.getNestedOrSetEmpty("_export").getNestedOrSetEmpty("athena")
-
-    export.set("auth_method", authMethod)
-    export.set("profile_name", profileName)
-    if (profileFile.isPresent) export.set("profile_file", profileFile.get())
-    export.set("use_http_proxy", useHttpProxy)
-    if (region.isPresent) export.set("region", region.get())
-    if (endpoint.isPresent) export.set("endpoint", endpoint.get())
-
-    if (preview) subTask.setNested("+run-preview", buildPreviewSubTaskConfig(lastQuery))
-    if (!keepMetadata) subTask.setNested("+run-remove-matadata", buildRemoveMetadataSubTaskConfig(lastQuery))
-
-    subTask
-  }
-
   protected def buildPreviewSubTaskConfig(lastQuery: LastQuery): Config = {
     val subTask: Config = cf.create()
     subTask.set("_type", "athena.preview")
     subTask.set("_command", lastQuery.id)
     subTask.set("max_rows", 10)
-
-    subTask.set("auth_method", authMethod)
-    subTask.set("profile_name", profileName)
-    if (profileFile.isPresent) subTask.set("profile_file", profileFile.get())
-    subTask.set("use_http_proxy", useHttpProxy)
-    if (region.isPresent) subTask.set("region", region.get())
-    if (endpoint.isPresent) subTask.set("endpoint", endpoint.get())
-
-    subTask
-  }
-
-  protected def buildRemoveMetadataSubTaskConfig(lastQuery: LastQuery): Config = {
-    val subTask: Config = cf.create()
-    subTask.set("_type", "athena.remove_metadata")
-    subTask.set("_command", lastQuery.outputCsvMetadataUri.toString)
 
     subTask.set("auth_method", authMethod)
     subTask.set("profile_name", profileName)

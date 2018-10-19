@@ -1,3 +1,11 @@
+0.1.0 (2018-10-20)
+==================
+
+* [New Feature] Add `athena.ctas>` operator
+* [Breaking Change] Remove **keep_metadata** and **save_mode** option from athena.query operator.
+* [Change] Change **output** option in `athena.query` to not required
+* [Deprecated] Change **output** option in `athena.query` to deprecated
+
 0.0.6 (2018-10-14)
 ==================
 
