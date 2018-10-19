@@ -98,7 +98,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     subTask.setNested("+ctas", buildQuerySubTaskConfig(generateCtasQuery()))
     if (tableMode.equals(TableMode.DataOnly)) subTask.setNested("+drop-after-ctas", buildQuerySubTaskConfig(generateDropTableQuery()))
 
-    val builder: ImmutableTaskResult.Builder = TaskResult.builder()
+    val builder: ImmutableTaskResult.Builder = TaskResult.defaultBuilder(cf)
     builder.subtaskConfig(subTask)
     builder.build()
   }
