@@ -112,7 +112,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     val execId: String = startQueryExecution
     val lastQuery: LastQuery = pollingQueryExecution(execId)
 
-    logger.info(s"[$operatorName] Created ${lastQuery.output} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
+    logger.info(s"[$operatorName] Executed ${lastQuery.id} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
     val p: Config = buildLastQueryParam(lastQuery)
 
     val builder = TaskResult.defaultBuilder(request)
