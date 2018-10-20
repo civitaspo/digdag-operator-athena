@@ -145,7 +145,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **table_mode**: Specify the expected behavior of CTAS results. Available values are `"default"`, `"empty"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
   - `"default"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
   - `"empty_table"`: Create a new empty table with the same schema as the select query results.
-  - `"data_only"`:
+  - `"data_only"`: Create a new table with data by CTAS, but drop this after CTAS execution. The table created by CTAS is an external table, so the data is left even if the table is dropped.
 - **save_mode**: Specify the expected behavior of CTAS. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
   - `"none"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
   - `"error_if_exists"`: Raise error if the distination table or location exists.
