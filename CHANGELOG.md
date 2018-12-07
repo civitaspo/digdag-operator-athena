@@ -1,3 +1,8 @@
+0.1.3 (2018-12-07)
+==================
+
+* [Fix] All queries are executed as a new query, even if the same query is executed in the same digdag session.
+
 0.1.2 (2018-12-07)
 ==================
 
