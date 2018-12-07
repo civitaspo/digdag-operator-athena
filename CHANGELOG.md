@@ -1,3 +1,8 @@
+0.1.1 (2018-12-07)
+==================
+
+* [Fix] `athena.ctas>` Skip removing objects if removable targets do not exist.
+
 0.1.0 (2018-10-20)
 ==================
 
