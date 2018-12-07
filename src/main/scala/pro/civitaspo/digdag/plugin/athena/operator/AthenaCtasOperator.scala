@@ -58,7 +58,7 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
 
   protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val table: String = params.get("table", classOf[String], s"digdag-athena-ctas-$sessionUuid")
+  protected val table: String = params.get("table", classOf[String], s"digdag_athena_ctas_${sessionUuid.replaceAll("-", "_")}")
   protected val output: Optional[String] = params.getOptional("output", classOf[String])
   protected val format: String = params.get("format", classOf[String], "parquet")
   protected val compression: String = params.get("compression", classOf[String], "snappy")
