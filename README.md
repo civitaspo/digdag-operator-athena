@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.1.3
+      - pro.civitaspo:digdag-operator-athena:0.1.4
   athena:
     auth_method: profile
 
@@ -199,3 +199,8 @@ aws configure
 # Author
 
 @civitaspo
+
+# Contributor
+
+- @s-wool
+- @daichi-hirose
