@@ -22,7 +22,7 @@ import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 
-import scala.util.Try
+import scala.util.{Random, Try}
 import scala.util.hashing.MurmurHash3
 
 class AthenaQueryOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
@@ -80,7 +80,8 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
 
   protected lazy val clientRequestToken: String = {
     val queryHash: Int = MurmurHash3.bytesHash(query.getBytes(UTF_8), 0)
-    s"$tokenPrefix-$sessionUuid-$queryHash"
+    val random: String = Random.alphanumeric.take(5).mkString
+    s"$tokenPrefix-$sessionUuid-$queryHash-$random"
   }
 
   protected lazy val output: AmazonS3URI = {
