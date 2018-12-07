@@ -1,3 +1,8 @@
+0.1.2 (2018-12-07)
+==================
+
+* [Fix] `athena.ctas>` Use normalized table name by default.
+
 0.1.1 (2018-12-07)
 ==================
 
