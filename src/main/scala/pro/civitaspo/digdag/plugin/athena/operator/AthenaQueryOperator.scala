@@ -72,8 +72,15 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
 
   protected lazy val query: String = {
     val t = Try {
-      val f = workspace.getFile(queryOrFile)
-      workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+      if (queryOrFile.startsWith("s3://")) {
+        val uri = AmazonS3URI(queryOrFile)
+        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+        templateEngine.template(content, params)
+      }
+      else {
+        val f = workspace.getFile(queryOrFile)
+        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+      }
     }
     t.getOrElse(queryOrFile)
   }
