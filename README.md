@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.1.2
+      - pro.civitaspo:digdag-operator-athena:0.1.3
   athena:
     auth_method: profile
 
@@ -85,7 +85,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 ### Options
 
 - **athena.query>**: The SQL query statements or file to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, required)
-- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena"`)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${random string}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
 - **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
@@ -151,7 +151,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"error_if_exists"`: Raise error if the distination table or location exists.
   - `"ignore"`: Skip CTAS query if the distination table or location exists.
   - `"overwrite"`: Drop the distination table and remove objects before executing CTAS. This operation is not atomic.
-- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}`. (string, default: `"digdag-athena-ctas"`)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-ctas"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 
 ### Output Parameters
