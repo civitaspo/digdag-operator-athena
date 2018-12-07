@@ -74,8 +74,15 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
 
   protected lazy val selectQuery: String = {
     val t: Try[String] = Try {
-      val f: File = workspace.getFile(selectQueryOrFile)
-      workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+      if (selectQueryOrFile.startsWith("s3://")) {
+        val uri = AmazonS3URI(selectQueryOrFile)
+        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+        templateEngine.template(content, params)
+      }
+      else {
+        val f: File = workspace.getFile(selectQueryOrFile)
+        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+      }
     }
     t.getOrElse(selectQueryOrFile)
   }
