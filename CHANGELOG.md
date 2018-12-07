@@ -1,3 +1,8 @@
+0.1.4 (2018-12-07)
+==================
+
+* [New Feature] Add supporting to use Amazon S3 file for query execution
+
 0.1.3 (2018-12-07)
 ==================
 
