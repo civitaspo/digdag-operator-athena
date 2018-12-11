@@ -11,7 +11,7 @@ import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, Template
 import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
@@ -73,18 +73,36 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
   protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
 
   protected lazy val selectQuery: String = {
-    val t: Try[String] = Try {
-      if (selectQueryOrFile.startsWith("s3://")) {
-        val uri = AmazonS3URI(selectQueryOrFile)
-        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-        templateEngine.template(content, params)
-      }
-      else {
-        val f: File = workspace.getFile(selectQueryOrFile)
-        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-      }
-    }
+    val t: Try[String] =
+      if (selectQueryOrFile.startsWith("s3://")) loadQueryOnS3(selectQueryOrFile)
+      else loadQueryOnLocalFileSystem(selectQueryOrFile)
+
     t.getOrElse(selectQueryOrFile)
+  }
+
+  protected def loadQueryOnS3(uriString: String): Try[String] = {
+    val t = Try {
+      val uri: AmazonS3URI = AmazonS3URI(uriString)
+      val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+      templateEngine.template(content, params)
+    }
+    t match {
+      case Success(_) => logger.info("Succeeded to load the query on S3.")
+      case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
+    }
+    t
+  }
+
+  protected def loadQueryOnLocalFileSystem(path: String): Try[String] = {
+    val t = Try {
+      val f = workspace.getFile(path)
+      workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+    }
+    t match {
+      case Success(_) => logger.info("Succeeded to load the query on LocalFileSystem.")
+      case Failure(e) => logger.warn(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")
+    }
+    t
   }
 
   override def runTask(): TaskResult = {

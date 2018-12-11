@@ -22,7 +22,7 @@ import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 
-import scala.util.{Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 import scala.util.hashing.MurmurHash3
 
 class AthenaQueryOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
@@ -71,18 +71,36 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
   protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
 
   protected lazy val query: String = {
-    val t = Try {
-      if (queryOrFile.startsWith("s3://")) {
-        val uri = AmazonS3URI(queryOrFile)
-        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-        templateEngine.template(content, params)
-      }
-      else {
-        val f = workspace.getFile(queryOrFile)
-        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-      }
-    }
+    val t: Try[String] =
+      if (queryOrFile.startsWith("s3://")) loadQueryOnS3(queryOrFile)
+      else loadQueryOnLocalFileSystem(queryOrFile)
+
     t.getOrElse(queryOrFile)
+  }
+
+  protected def loadQueryOnS3(uriString: String): Try[String] = {
+    val t = Try {
+      val uri: AmazonS3URI = AmazonS3URI(uriString)
+      val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+      templateEngine.template(content, params)
+    }
+    t match {
+      case Success(_) => logger.info("Succeeded to load the query on S3.")
+      case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
+    }
+    t
+  }
+
+  protected def loadQueryOnLocalFileSystem(path: String): Try[String] = {
+    val t = Try {
+      val f = workspace.getFile(path)
+      workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+    }
+    t match {
+      case Success(_) => logger.debug("Succeeded to load the query on LocalFileSystem.")
+      case Failure(e) => logger.debug(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")
+    }
+    t
   }
 
   protected lazy val clientRequestToken: String = {
