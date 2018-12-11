@@ -1,6 +1,5 @@
 package pro.civitaspo.digdag.plugin.athena.operator
 
-import java.io.File
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.amazonaws.services.s3.AmazonS3URI
@@ -11,7 +10,7 @@ import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, Template
 import io.digdag.util.DurationParam
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine) {
@@ -56,9 +55,15 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     }
   }
 
+  protected lazy val defaultTableName: String = {
+    val normalizedSessionUuid: String = sessionUuid.replaceAll("-", "")
+    val random: String = Random.alphanumeric.take(5).mkString
+    s"digdag_athena_ctas_${normalizedSessionUuid}_$random"
+  }
+
   protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
   protected val database: Optional[String] = params.getOptional("database", classOf[String])
-  protected val table: String = params.get("table", classOf[String], s"digdag_athena_ctas_${sessionUuid.replaceAll("-", "_")}")
+  protected val table: String = params.get("table", classOf[String], defaultTableName)
   protected val output: Optional[String] = params.getOptional("output", classOf[String])
   protected val format: String = params.get("format", classOf[String], "parquet")
   protected val compression: String = params.get("compression", classOf[String], "snappy")
