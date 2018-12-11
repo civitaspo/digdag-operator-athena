@@ -1,3 +1,9 @@
+0.1.5 (2018-12-11)
+==================
+
+* [Enhancement] Expose more logs when loading queries.
+* [Enhancement] * Use an unique table name as default in `athena.ctas>`
+
 0.1.4 (2018-12-07)
 ==================
 
