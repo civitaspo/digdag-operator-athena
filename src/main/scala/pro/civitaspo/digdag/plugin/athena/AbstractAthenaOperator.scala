@@ -1,32 +1,13 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena
 
-import com.amazonaws.{ClientConfiguration, Protocol}
-import com.amazonaws.auth.{
-  AnonymousAWSCredentials,
-  AWSCredentials,
-  AWSCredentialsProvider,
-  AWSStaticCredentialsProvider,
-  BasicAWSCredentials,
-  BasicSessionCredentials,
-  EC2ContainerCredentialsProviderWrapper,
-  EnvironmentVariableCredentialsProvider,
-  SystemPropertiesCredentialsProvider
-}
-import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
-import com.amazonaws.client.builder.AwsClientBuilder
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
-import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
-import com.google.common.base.Optional
-import io.digdag.client.config.{Config, ConfigException, ConfigFactory}
+import com.amazonaws.services.athena.AmazonAthena
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService
+import io.digdag.client.config.{Config, ConfigFactory}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
 import io.digdag.util.{BaseOperator, DurationParam}
 import org.slf4j.{Logger, LoggerFactory}
-
-import scala.util.Try
+import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsConf}
 
 abstract class AbstractAthenaOperator(operatorName: String, context: OperatorContext, systemConfig: Config, templateEngine: TemplateEngine)
     extends BaseOperator(context) {
@@ -42,189 +23,41 @@ abstract class AbstractAthenaOperator(operatorName: String, context: OperatorCon
     }
   }
   protected val secrets: SecretProvider = context.getSecrets.getSecrets("athena")
-
   protected val sessionUuid: String = params.get("session_uuid", classOf[String])
 
-  protected val isAllowedAuthMethodEnv: Boolean = systemConfig.get("athena.allow_auth_method_env", classOf[Boolean], false)
-  protected val isAllowedAuthMethodInstance: Boolean = systemConfig.get("athena.allow_auth_method_instance", classOf[Boolean], false)
-  protected val isAllowedAuthMethodProfile: Boolean = systemConfig.get("athena.allow_auth_method_profile", classOf[Boolean], false)
-  protected val isAllowedAuthMethodProperties: Boolean = systemConfig.get("athena.allow_auth_method_properties", classOf[Boolean], false)
-  protected val assumeRoleTimeoutDuration: DurationParam =
-    systemConfig.get("athena.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h"))
-
-  protected val accessKeyId: Optional[String] = secrets.getSecretOptional("access_key_id")
-  protected val secretAccessKey: Optional[String] = secrets.getSecretOptional("secret_access_key")
-  protected val sessionToken: Optional[String] = secrets.getSecretOptional("session_token")
-  protected val roleArn: Optional[String] = secrets.getSecretOptional("role_arn")
-  protected val roleSessionName: String = secrets.getSecretOptional("role_session_name").or(s"digdag-athena-$sessionUuid")
-  protected val httpProxy: SecretProvider = secrets.getSecrets("http_proxy")
-
-  protected val authMethod: String = params.get("auth_method", classOf[String], "basic")
-  protected val profileName: String = params.get("profile_name", classOf[String], "default")
-  protected val profileFile: Optional[String] = params.getOptional("profile_file", classOf[String])
-  protected val useHttpProxy: Boolean = params.get("use_http_proxy", classOf[Boolean], false)
-  protected val region: Optional[String] = params.getOptional("region", classOf[String])
-  protected val endpoint: Optional[String] = params.getOptional("endpoint", classOf[String])
 
   protected def withAthena[T](f: AmazonAthena => T): T = {
-    val athena = buildAthena
-    try f(athena)
-    finally athena.shutdown()
+    aws.withAthena(f)
   }
 
   protected def withS3[T](f: AmazonS3 => T): T = {
-    val s3 = buildS3
-    try f(s3)
-    finally s3.shutdown()
+    aws.withS3(f)
   }
 
   protected def withSts[T](f: AWSSecurityTokenService => T): T = {
-    val sts = buildSts
-    try f(sts)
-    finally sts.shutdown()
+    aws.withSts(f)
   }
 
-  private def buildAthena: AmazonAthena = {
-    configureBuilderEndpointConfiguration(AmazonAthenaClientBuilder.standard())
-      .withClientConfiguration(clientConfiguration)
-      .withCredentials(credentialsProvider)
-      .build()
-  }
-
-  private def buildS3: AmazonS3 = {
-    configureBuilderEndpointConfiguration(AmazonS3ClientBuilder.standard())
-      .withClientConfiguration(clientConfiguration)
-      .withCredentials(credentialsProvider)
-      .build()
-  }
-
-  private def buildSts: AWSSecurityTokenService = {
-    configureBuilderEndpointConfiguration(AWSSecurityTokenServiceClientBuilder.standard())
-      .withClientConfiguration(clientConfiguration)
-      .withCredentials(credentialsProvider)
-      .build()
-  }
-
-  private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] = {
-    if (region.isPresent && endpoint.isPresent) {
-      val ec = new EndpointConfiguration(endpoint.get(), region.get())
-      builder.setEndpointConfiguration(ec)
-    }
-    else if (region.isPresent && !endpoint.isPresent) {
-      builder.setRegion(region.get())
-    }
-    else if (!region.isPresent && endpoint.isPresent) {
-      val r = Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName)
-      val ec = new EndpointConfiguration(endpoint.get(), r)
-      builder.setEndpointConfiguration(ec)
-    }
-    builder
-  }
-
-  private def credentialsProvider: AWSCredentialsProvider = {
-    if (!roleArn.isPresent) return standardCredentialsProvider
-    assumeRoleCredentialsProvider(standardCredentialsProvider)
-  }
-
-  private def standardCredentialsProvider: AWSCredentialsProvider = {
-    authMethod match {
-      case "basic" => basicAuthMethodAWSCredentialsProvider
-      case "env" => envAuthMethodAWSCredentialsProvider
-      case "instance" => instanceAuthMethodAWSCredentialsProvider
-      case "profile" => profileAuthMethodAWSCredentialsProvider
-      case "properties" => propertiesAuthMethodAWSCredentialsProvider
-      case "anonymous" => anonymousAuthMethodAWSCredentialsProvider
-      case "session" => sessionAuthMethodAWSCredentialsProvider
-      case _ =>
-        throw new ConfigException(
-          s"""[$operatorName] auth_method: "$authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session"."""
-        )
-    }
-  }
-
-  private def assumeRoleCredentialsProvider(credentialsProviderToAssumeRole: AWSCredentialsProvider): AWSCredentialsProvider = {
-    // TODO: require EndpointConfiguration so on ?
-    val sts = AWSSecurityTokenServiceClientBuilder
-      .standard()
-      .withClientConfiguration(clientConfiguration)
-      .withCredentials(credentialsProviderToAssumeRole)
-      .build()
-
-    val role = sts.assumeRole(
-      new AssumeRoleRequest()
-        .withRoleArn(roleArn.get())
-        .withDurationSeconds(assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
-        .withRoleSessionName(roleSessionName)
+  protected val aws: Aws = Aws(
+    AwsConf(
+      isAllowedAuthMethodEnv = systemConfig.get("athena.allow_auth_method_env", classOf[Boolean], false),
+      isAllowedAuthMethodInstance = systemConfig.get("athena.allow_auth_method_instance", classOf[Boolean], false),
+      isAllowedAuthMethodProfile = systemConfig.get("athena.allow_auth_method_profile", classOf[Boolean], false),
+      isAllowedAuthMethodProperties = systemConfig.get("athena.allow_auth_method_properties", classOf[Boolean], false),
+      assumeRoleTimeoutDuration = systemConfig.get("athena.assume_role_timeout_duration", classOf[DurationParam], DurationParam.parse("1h")),
+      accessKeyId = secrets.getSecretOptional("access_key_id"),
+      secretAccessKey = secrets.getSecretOptional("secret_access_key"),
+      sessionToken = secrets.getSecretOptional("session_token"),
+      roleArn = secrets.getSecretOptional("role_arn"),
+      roleSessionName = secrets.getSecretOptional("role_session_name").or(s"digdag-athena-$sessionUuid"),
+      httpProxy = secrets.getSecrets("http_proxy"),
+      authMethod = params.get("auth_method", classOf[String], "basic"),
+      profileName = params.get("profile_name", classOf[String], "default"),
+      profileFile = params.getOptional("profile_file", classOf[String]),
+      useHttpProxy = params.get("use_http_proxy", classOf[Boolean], false),
+      region = params.getOptional("region", classOf[String]),
+      endpoint = params.getOptional("endpoint", classOf[String])
     )
-    val credentials =
-      new BasicSessionCredentials(role.getCredentials.getAccessKeyId, role.getCredentials.getSecretAccessKey, role.getCredentials.getSessionToken)
-    new AWSStaticCredentialsProvider(credentials)
-  }
+  )
 
-  private def basicAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!accessKeyId.isPresent) throw new ConfigException(s"""[$operatorName] `access_key_id` must be set when `auth_method` is "$authMethod".""")
-    if (!secretAccessKey.isPresent) throw new ConfigException(s"""[$operatorName] `secret_access_key` must be set when `auth_method` is "$authMethod".""")
-    val credentials: AWSCredentials = new BasicAWSCredentials(accessKeyId.get(), secretAccessKey.get())
-    new AWSStaticCredentialsProvider(credentials)
-  }
-
-  private def envAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodEnv) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
-    new EnvironmentVariableCredentialsProvider
-  }
-
-  private def instanceAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodInstance) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
-    // NOTE: combination of InstanceProfileCredentialsProvider and ContainerCredentialsProvider
-    new EC2ContainerCredentialsProviderWrapper
-  }
-
-  private def profileAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodProfile) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
-    if (!profileFile.isPresent) return new ProfileCredentialsProvider(profileName)
-    val pf: ProfilesConfigFile = new ProfilesConfigFile(profileFile.get())
-    new ProfileCredentialsProvider(pf, profileName)
-  }
-
-  private def propertiesAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!isAllowedAuthMethodProperties) throw new ConfigException(s"""[$operatorName] auth_method: "$authMethod" is not allowed.""")
-    new SystemPropertiesCredentialsProvider()
-  }
-
-  private def anonymousAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    val credentials: AWSCredentials = new AnonymousAWSCredentials
-    new AWSStaticCredentialsProvider(credentials)
-  }
-
-  private def sessionAuthMethodAWSCredentialsProvider: AWSCredentialsProvider = {
-    if (!accessKeyId.isPresent) throw new ConfigException(s"""[$operatorName] `access_key_id` must be set when `auth_method` is "$authMethod".""")
-    if (!secretAccessKey.isPresent) throw new ConfigException(s"""[$operatorName] `secret_access_key` must be set when `auth_method` is "$authMethod".""")
-    if (!sessionToken.isPresent) throw new ConfigException(s"""[$operatorName] `session_token` must be set when `auth_method` is "$authMethod".""")
-    val credentials: AWSCredentials = new BasicSessionCredentials(accessKeyId.get(), secretAccessKey.get(), sessionToken.get())
-    new AWSStaticCredentialsProvider(credentials)
-  }
-
-  private def clientConfiguration: ClientConfiguration = {
-    if (!useHttpProxy) return new ClientConfiguration()
-
-    val host: String = httpProxy.getSecret("host")
-    val port: Optional[String] = httpProxy.getSecretOptional("port")
-    val protocol: Protocol = httpProxy.getSecretOptional("scheme").or("https") match {
-      case "http" => Protocol.HTTP
-      case "https" => Protocol.HTTPS
-      case _ => throw new ConfigException(s"""[$operatorName] `athena.http_proxy.scheme` must be "http" or "https".""")
-    }
-    val user: Optional[String] = httpProxy.getSecretOptional("user")
-    val password: Optional[String] = httpProxy.getSecretOptional("password")
-
-    val cc = new ClientConfiguration()
-      .withProxyHost(host)
-      .withProtocol(protocol)
-
-    if (port.isPresent) cc.setProxyPort(port.get().toInt)
-    if (user.isPresent) cc.setProxyUsername(user.get())
-    if (password.isPresent) cc.setProxyPassword(password.get())
-
-    cc
-  }
 }
