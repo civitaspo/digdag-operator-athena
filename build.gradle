@@ -1,16 +1,15 @@
 plugins {
     id 'scala'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '2.0.2'
-    id "com.diffplug.gradle.spotless" version "3.13.0"
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
 group = 'pro.civitaspo'
-version = '0.1.5'
+version = '0.2.0'
 
-def digdagVersion = '0.9.27'
-def awsSdkVersion = "1.11.372"
-def scalaSemanticVersion = "2.12.6"
+def digdagVersion = '0.9.37'
+def awsSdkVersion = "1.11.587"
+def scalaSemanticVersion = "2.12.8"
 def depScalaVersion = "2.12"
 
 repositories {
@@ -52,12 +51,6 @@ publishing {
         maven {
             url "$buildDir/repo"
         }
-    }
-}
-
-spotless {
-    scala {
-        scalafmt('1.5.1').configFile('.scalafmt.conf')
     }
 }
 
