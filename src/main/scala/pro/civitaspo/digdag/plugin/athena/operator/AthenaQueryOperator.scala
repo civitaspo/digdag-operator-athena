@@ -4,14 +4,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
-import com.amazonaws.services.athena.model.{
-  GetQueryExecutionRequest,
-  QueryExecution,
-  QueryExecutionContext,
-  QueryExecutionState,
-  ResultConfiguration,
-  StartQueryExecutionRequest
-}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
@@ -21,6 +14,7 @@ import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
+import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.util.{Failure, Random, Success, Try}
 import scala.util.hashing.MurmurHash3

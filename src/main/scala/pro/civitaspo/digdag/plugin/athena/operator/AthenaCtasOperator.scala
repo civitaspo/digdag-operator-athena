@@ -8,6 +8,7 @@ import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
+import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Random, Success, Try}

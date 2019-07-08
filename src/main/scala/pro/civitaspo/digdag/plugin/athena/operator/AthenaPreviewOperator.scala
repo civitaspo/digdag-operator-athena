@@ -4,6 +4,7 @@ import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
+import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.collection.JavaConverters._
 import scala.util.Try
