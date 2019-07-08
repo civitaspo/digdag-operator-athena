@@ -7,9 +7,9 @@ plugins {
 group = 'pro.civitaspo'
 version = '0.2.0'
 
-def digdagVersion = '0.9.27'
-def awsSdkVersion = "1.11.372"
-def scalaSemanticVersion = "2.12.6"
+def digdagVersion = '0.9.37'
+def awsSdkVersion = "1.11.587"
+def scalaSemanticVersion = "2.12.8"
 def depScalaVersion = "2.12"
 
 repositories {
