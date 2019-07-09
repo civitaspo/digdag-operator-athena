@@ -11,11 +11,6 @@ references:
       TERM: dumb
 
 jobs:
-  spotless:
-    <<: *environment
-    steps:
-      - checkout
-      - run: ./gradlew spotlessCheck
 
   build:
     <<: *environment
@@ -36,6 +31,4 @@ workflows:
   merge-before:
     jobs:
       - build
-      - spotless
-
   
