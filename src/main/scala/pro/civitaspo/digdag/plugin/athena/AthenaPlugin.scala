@@ -6,7 +6,9 @@ import java.util.{Arrays => JArrays, List => JList}
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
-import pro.civitaspo.digdag.plugin.athena.operator.{AbstractAthenaOperator, AthenaCtasOperator, AthenaPreviewOperator, AthenaQueryOperator}
+import pro.civitaspo.digdag.plugin.athena.ctas.AthenaCtasOperator
+import pro.civitaspo.digdag.plugin.athena.preview.AthenaPreviewOperator
+import pro.civitaspo.digdag.plugin.athena.query.AthenaQueryOperator
 
 object AthenaPlugin {
 

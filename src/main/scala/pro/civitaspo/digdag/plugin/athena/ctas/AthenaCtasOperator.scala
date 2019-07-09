@@ -1,4 +1,4 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
@@ -8,6 +8,7 @@ import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
+import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Random, Success, Try}
@@ -204,12 +205,12 @@ class AthenaCtasOperator(operatorName: String, context: OperatorContext, systemC
     subTask.set("preview", false)
     subTask.set("output", Optional.absent())
 
-    subTask.set("auth_method", authMethod)
-    subTask.set("profile_name", profileName)
-    if (profileFile.isPresent) subTask.set("profile_file", profileFile.get())
-    subTask.set("use_http_proxy", useHttpProxy)
-    if (region.isPresent) subTask.set("region", region.get())
-    if (endpoint.isPresent) subTask.set("endpoint", endpoint.get())
+    subTask.set("auth_method", aws.conf.authMethod)
+    subTask.set("profile_name", aws.conf.profileName)
+    if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
+    subTask.set("use_http_proxy", aws.conf.useHttpProxy)
+    if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+    if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
     subTask
   }

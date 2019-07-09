@@ -1,17 +1,10 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena.query
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
-import com.amazonaws.services.athena.model.{
-  GetQueryExecutionRequest,
-  QueryExecution,
-  QueryExecutionContext,
-  QueryExecutionState,
-  ResultConfiguration,
-  StartQueryExecutionRequest
-}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
@@ -21,6 +14,7 @@ import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
+import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.util.{Failure, Random, Success, Try}
 import scala.util.hashing.MurmurHash3
@@ -114,7 +108,7 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
       if (outputOptional.isPresent) outputOptional.get()
       else {
         val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
-        val r = region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+        val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
         s"s3://aws-athena-query-results-$accountId-$r"
       }
     }
@@ -227,12 +221,12 @@ class AthenaQueryOperator(operatorName: String, context: OperatorContext, system
     subTask.set("_command", lastQuery.id)
     subTask.set("max_rows", 10)
 
-    subTask.set("auth_method", authMethod)
-    subTask.set("profile_name", profileName)
-    if (profileFile.isPresent) subTask.set("profile_file", profileFile.get())
-    subTask.set("use_http_proxy", useHttpProxy)
-    if (region.isPresent) subTask.set("region", region.get())
-    if (endpoint.isPresent) subTask.set("endpoint", endpoint.get())
+    subTask.set("auth_method", aws.conf.authMethod)
+    subTask.set("profile_name", aws.conf.profileName)
+    if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
+    subTask.set("use_http_proxy", aws.conf.useHttpProxy)
+    if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+    if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
     subTask
   }
