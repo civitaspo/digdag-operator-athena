@@ -104,7 +104,7 @@ class AthenaCtasOperator(operatorName: String,
             if (selectQueryOrFile.startsWith("s3://")) loadQueryOnS3(selectQueryOrFile)
             else loadQueryOnLocalFileSystem(selectQueryOrFile)
 
-        t.getOrElse(selectQueryOrFile)
+        t.getOrElse(selectQueryOrFile).replaceAll(";\\s+?$", "")
     }
 
     protected def loadQueryOnS3(uriString: String): Try[String] =
