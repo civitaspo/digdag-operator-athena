@@ -74,7 +74,7 @@ class AthenaQueryOperator(operatorName: String,
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     @deprecated protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
     protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
-    protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
+    protected val preview: Boolean = params.get("preview", classOf[Boolean], false)
 
     protected lazy val query: String = {
         val t: Try[String] =
