@@ -1,4 +1,5 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena.preview
+
 import com.amazonaws.services.athena.model.{GetQueryResultsRequest, GetQueryResultsResult}
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList

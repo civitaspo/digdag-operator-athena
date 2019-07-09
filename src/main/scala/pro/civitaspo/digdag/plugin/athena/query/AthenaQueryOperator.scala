@@ -1,4 +1,4 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena.query
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration

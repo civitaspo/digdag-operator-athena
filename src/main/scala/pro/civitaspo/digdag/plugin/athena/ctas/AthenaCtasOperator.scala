@@ -1,4 +1,4 @@
-package pro.civitaspo.digdag.plugin.athena.operator
+package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
