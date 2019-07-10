@@ -87,8 +87,7 @@ class AthenaQueryOperator(operatorName: String,
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-            val uri: AmazonS3URI = AmazonS3URI(uriString)
-            val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+            val content = aws.s3.readObject(uriString)
             templateEngine.template(content, params)
         }
         t match {

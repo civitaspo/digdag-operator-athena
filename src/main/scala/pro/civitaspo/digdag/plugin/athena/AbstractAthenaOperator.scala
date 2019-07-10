@@ -2,7 +2,6 @@ package pro.civitaspo.digdag.plugin.athena
 
 
 import com.amazonaws.services.athena.AmazonAthena
-import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import io.digdag.client.config.{Config, ConfigFactory}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
@@ -36,11 +35,6 @@ abstract class AbstractAthenaOperator(operatorName: String,
     protected def withAthena[T](f: AmazonAthena => T): T =
     {
         aws.withAthena(f)
-    }
-
-    protected def withS3[T](f: AmazonS3 => T): T =
-    {
-        aws.withS3(f)
     }
 
     protected def withSts[T](f: AWSSecurityTokenService => T): T =

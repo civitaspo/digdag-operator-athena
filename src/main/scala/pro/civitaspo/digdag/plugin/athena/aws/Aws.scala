@@ -8,11 +8,11 @@ import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
+import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
 
 import scala.util.Try
 
@@ -25,14 +25,6 @@ case class Aws(conf: AwsConf)
         val athena = buildService(AmazonAthenaClientBuilder.standard())
         try f(athena)
         finally athena.shutdown()
-    }
-
-    @deprecated
-    def withS3[T](f: AmazonS3 => T): T =
-    {
-        val s3 = buildService(AmazonS3ClientBuilder.standard())
-        try f(s3)
-        finally s3.shutdown()
     }
 
     @deprecated
@@ -49,6 +41,11 @@ case class Aws(conf: AwsConf)
             .withClientConfiguration(clientConfiguration)
             .withCredentials(credentialsProvider)
             .build()
+    }
+
+    def s3: S3 =
+    {
+        S3(this)
     }
 
     private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] =

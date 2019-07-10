@@ -4,7 +4,6 @@ package pro.civitaspo.digdag.plugin.athena.ctas
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.amazonaws.services.s3.AmazonS3URI
-import com.amazonaws.services.s3.model.{DeleteObjectsRequest, DeleteObjectsResult}
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
@@ -20,16 +19,6 @@ class AthenaCtasOperator(operatorName: String,
                          templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine)
 {
-
-    object AmazonS3URI
-    {
-
-        def apply(path: String): AmazonS3URI =
-        {
-            new AmazonS3URI(path, false)
-        }
-    }
-
     sealed abstract class TableMode
 
     object TableMode
@@ -110,8 +99,7 @@ class AthenaCtasOperator(operatorName: String,
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-            val uri: AmazonS3URI = AmazonS3URI(uriString)
-            val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+            val content = aws.s3.readObject(uriString)
             templateEngine.template(content, params)
         }
         t match {
@@ -160,17 +148,12 @@ class AthenaCtasOperator(operatorName: String,
 
     protected def hasObjects(location: String): Boolean =
     {
-        val uri: AmazonS3URI = AmazonS3URI(location)
-        !withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.isEmpty
+        aws.s3.ls(location).nonEmpty
     }
 
     protected def rmObjects(location: String): Unit =
     {
-        val uri: AmazonS3URI = AmazonS3URI(location)
-        val keys: Seq[String] = withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.asScala.map(_.getKey)
-        if (keys.isEmpty) return
-        val r: DeleteObjectsResult = withS3(_.deleteObjects(new DeleteObjectsRequest(uri.getBucket).withKeys(keys: _*)))
-        r.getDeletedObjects.asScala.foreach(o => logger.info(s"Deleted: s3://${uri.getBucket}/${o.getKey}"))
+        aws.s3.rm_r(location).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
     }
 
     protected def generateCtasQuery(): String =

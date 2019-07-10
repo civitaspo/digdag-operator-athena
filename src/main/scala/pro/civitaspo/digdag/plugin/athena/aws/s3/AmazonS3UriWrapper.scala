@@ -1,4 +1,4 @@
-package pro.civitaspo.digdag.plugin.athena.aws
+package pro.civitaspo.digdag.plugin.athena.aws.s3
 
 
 import com.amazonaws.services.s3.AmazonS3URI
