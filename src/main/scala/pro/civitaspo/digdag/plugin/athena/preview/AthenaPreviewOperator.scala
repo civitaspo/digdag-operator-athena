@@ -58,7 +58,7 @@ class AthenaPreviewOperator(operatorName: String,
                         table = Try(Option(ci.getTableName)).getOrElse(None),
                         `type` = ci.getType
                         )
-                                                                                        },
+                },
                 rows = r.getResultSet.getRows.asScala.map(_.getData.asScala.map(_.getVarCharValue)).tail // the first row is column names
                 )
         }
@@ -122,7 +122,7 @@ class AthenaPreviewOperator(operatorName: String,
             cp.set("database", ci.database.getOrElse(Optional.absent()))
             cp.set("table", ci.table.getOrElse(Optional.absent()))
             cp.set("type", ci.`type`)
-                                              }
+        }
         lastPreviewParam.set("columns", columns.asJava)
         lastPreviewParam.set("rows", lastPreview.rows.map(_.asJava).asJava)
 

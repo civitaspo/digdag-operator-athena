@@ -110,10 +110,10 @@ class AthenaCtasOperator(operatorName: String,
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-                        val uri: AmazonS3URI = AmazonS3URI(uriString)
-                        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-                        templateEngine.template(content, params)
-                    }
+            val uri: AmazonS3URI = AmazonS3URI(uriString)
+            val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+            templateEngine.template(content, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on S3.")
             case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
@@ -124,9 +124,9 @@ class AthenaCtasOperator(operatorName: String,
     protected def loadQueryOnLocalFileSystem(path: String): Try[String] =
     {
         val t = Try {
-                        val f = workspace.getFile(path)
-                        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-                    }
+            val f = workspace.getFile(path)
+            workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on LocalFileSystem.")
             case Failure(e) => logger.warn(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")

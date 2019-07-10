@@ -26,8 +26,8 @@ abstract class AbstractAthenaOperator(operatorName: String,
             p.mergeDefault((0 to idx).foldLeft(request.getConfig) { (nestedParam: Config,
                                                                      keyIdx: Int) =>
                 nestedParam.getNestedOrGetEmpty(elems(keyIdx))
-                                                                  })
-                                                  }
+            })
+        }
     }
     protected val secrets: SecretProvider = context.getSecrets.getSecrets("athena")
     protected val sessionUuid: String = params.get("session_uuid", classOf[String])

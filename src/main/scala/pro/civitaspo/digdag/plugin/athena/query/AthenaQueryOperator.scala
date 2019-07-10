@@ -87,10 +87,10 @@ class AthenaQueryOperator(operatorName: String,
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-                        val uri: AmazonS3URI = AmazonS3URI(uriString)
-                        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-                        templateEngine.template(content, params)
-                    }
+            val uri: AmazonS3URI = AmazonS3URI(uriString)
+            val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
+            templateEngine.template(content, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on S3.")
             case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
@@ -101,9 +101,9 @@ class AthenaQueryOperator(operatorName: String,
     protected def loadQueryOnLocalFileSystem(path: String): Try[String] =
     {
         val t = Try {
-                        val f = workspace.getFile(path)
-                        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-                    }
+            val f = workspace.getFile(path)
+            workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+        }
         t match {
             case Success(_) => logger.debug("Succeeded to load the query on LocalFileSystem.")
             case Failure(e) => logger.debug(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")
@@ -119,13 +119,13 @@ class AthenaQueryOperator(operatorName: String,
 
     protected lazy val output: AmazonS3URI = {
         AmazonS3URI {
-                        if (outputOptional.isPresent) outputOptional.get()
-                        else {
-                            val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
-                            val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
-                            s"s3://aws-athena-query-results-$accountId-$r"
-                        }
-                    }
+            if (outputOptional.isPresent) outputOptional.get()
+            else {
+                val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+                val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
+                s"s3://aws-athena-query-results-$accountId-$r"
+            }
+        }
     }
 
     @deprecated private def showMessageIfUnsupportedOptionExists(): Unit =
@@ -188,32 +188,32 @@ class AthenaQueryOperator(operatorName: String,
             .withWaitGrowRate(1.1) // TODO: make it configurable?
             .withTimeout(timeout.getDuration)
             .retryIf {
-                         case _: RetryableException => true
-                         case _                     => false
-                     }
+                case _: RetryableException => true
+                case _                     => false
+            }
             .onRetry { p: ParamInRetry =>
                 logger.info(s"[$operatorName] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
-                     }
+            }
             .onGiveup { p: ParamInGiveup =>
                 logger.error(
                     s"[$operatorName] failed to execute query `$execId`. You can see last exception's stacktrace. (first exception message: ${p.firstException.getMessage}, last exception message: ${p.lastException.getMessage})",
                     p.lastException
                     )
-                      }
+            }
             .runInterruptible {
-                                  val r = withAthena(_.getQueryExecution(req))
-                                  val lastQuery = LastQuery(r.getQueryExecution)
+                val r = withAthena(_.getQueryExecution(req))
+                val lastQuery = LastQuery(r.getQueryExecution)
 
-                                  lastQuery.state match {
-                                      case SUCCEEDED =>
-                                          logger.info(s"[$operatorName] query is `$SUCCEEDED`")
-                                          lastQuery
-                                      case FAILED    => throw new NotRetryableException(message = s"[$operatorName] query is `$FAILED`")
-                                      case CANCELLED => throw new NotRetryableException(message = s"[$operatorName] query is `$CANCELLED`")
-                                      case RUNNING   => throw new RetryableException(message = s"query is `$RUNNING`")
-                                      case QUEUED    => throw new RetryableException(message = s"query is `$QUEUED`")
-                                  }
-                              }
+                lastQuery.state match {
+                    case SUCCEEDED =>
+                        logger.info(s"[$operatorName] query is `$SUCCEEDED`")
+                        lastQuery
+                    case FAILED    => throw new NotRetryableException(message = s"[$operatorName] query is `$FAILED`")
+                    case CANCELLED => throw new NotRetryableException(message = s"[$operatorName] query is `$CANCELLED`")
+                    case RUNNING   => throw new RetryableException(message = s"query is `$RUNNING`")
+                    case QUEUED    => throw new RetryableException(message = s"query is `$QUEUED`")
+                }
+            }
     }
 
     protected def buildLastQueryParam(lastQuery: LastQuery): Config =

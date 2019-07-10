@@ -105,14 +105,14 @@ class RetryExecutorWrapper(exe: RetryExecutor,
     {
         executeWithWrappedRetryExecutorWrapper { w =>
             w._runInterruptible(f)
-                                               }
+        }
     }
 
     def run[T](f: => T): T =
     {
         executeWithWrappedRetryExecutorWrapper { w =>
             w._run(f)
-                                               }
+        }
     }
 
     private def _runInterruptible[T](f: => T): T =
