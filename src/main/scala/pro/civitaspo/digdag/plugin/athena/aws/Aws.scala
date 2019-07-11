@@ -8,11 +8,10 @@ import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
-import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
 import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
+import pro.civitaspo.digdag.plugin.athena.aws.sts.Sts
 
 import scala.util.Try
 
@@ -27,14 +26,6 @@ case class Aws(conf: AwsConf)
         finally athena.shutdown()
     }
 
-    @deprecated
-    def withSts[T](f: AWSSecurityTokenService => T): T =
-    {
-        val sts = buildService(AWSSecurityTokenServiceClientBuilder.standard())
-        try f(sts)
-        finally sts.shutdown()
-    }
-
     private[aws] def buildService[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): T =
     {
         configureBuilderEndpointConfiguration(builder)
@@ -46,6 +37,11 @@ case class Aws(conf: AwsConf)
     def s3: S3 =
     {
         S3(this)
+    }
+
+    def sts: Sts =
+    {
+        Sts(this)
     }
 
     private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] =
@@ -90,22 +86,11 @@ case class Aws(conf: AwsConf)
 
     private def assumeRoleCredentialsProvider(credentialsProviderToAssumeRole: AWSCredentialsProvider): AWSCredentialsProvider =
     {
-        // TODO: require EndpointConfiguration so on ?
-        val sts = AWSSecurityTokenServiceClientBuilder
-            .standard()
-            .withClientConfiguration(clientConfiguration)
-            .withCredentials(credentialsProviderToAssumeRole)
-            .build()
-
-        val role = sts.assumeRole(
-            new AssumeRoleRequest()
-                .withRoleArn(conf.roleArn.get())
-                .withDurationSeconds(conf.assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
-                .withRoleSessionName(conf.roleSessionName)
-            )
-        val credentials =
-            new BasicSessionCredentials(role.getCredentials.getAccessKeyId, role.getCredentials.getSecretAccessKey, role.getCredentials.getSessionToken)
-        new AWSStaticCredentialsProvider(credentials)
+        val aws = Aws(this.conf.copy(roleArn = Optional.absent()))
+        val cred: BasicSessionCredentials = aws.sts.assumeRole(roleArn = conf.roleArn.get(),
+                                                               roleSessionName = conf.roleSessionName,
+                                                               durationSeconds = conf.assumeRoleTimeoutDuration.getDuration.getSeconds.toInt)
+        new AWSStaticCredentialsProvider(cred)
     }
 
     private def basicAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =

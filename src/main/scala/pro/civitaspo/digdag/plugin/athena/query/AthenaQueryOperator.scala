@@ -8,7 +8,6 @@ import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -120,7 +119,7 @@ class AthenaQueryOperator(operatorName: String,
         AmazonS3URI {
             if (outputOptional.isPresent) outputOptional.get()
             else {
-                val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
+                val accountId: String = aws.sts.getCallerIdentityAccountId
                 val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
                 s"s3://aws-athena-query-results-$accountId-$r"
             }
