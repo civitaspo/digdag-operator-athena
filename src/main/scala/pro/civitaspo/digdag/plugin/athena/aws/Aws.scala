@@ -99,7 +99,7 @@ case class Aws(conf: AwsConf)
             case "session"    => sessionAuthMethodAWSCredentialsProvider
             case _            =>
                 throw new ConfigException(
-                    s"""auth_method: "$conf.authMethod" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session"."""
+                    s"""auth_method: "${conf.authMethod}" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session"."""
                     )
         }
     }
@@ -115,28 +115,28 @@ case class Aws(conf: AwsConf)
 
     private def basicAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "$conf.authMethod".""")
-        if (!conf.secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "$conf.authMethod".""")
+        if (!conf.accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "${conf.authMethod}".""")
+        if (!conf.secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "${conf.authMethod}".""")
         val credentials: AWSCredentials = new BasicAWSCredentials(conf.accessKeyId.get(), conf.secretAccessKey.get())
         new AWSStaticCredentialsProvider(credentials)
     }
 
     private def envAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.isAllowedAuthMethodEnv) throw new ConfigException(s"""auth_method: "$conf.authMethod" is not allowed.""")
+        if (!conf.isAllowedAuthMethodEnv) throw new ConfigException(s"""auth_method: "${conf.authMethod}" is not allowed.""")
         new EnvironmentVariableCredentialsProvider
     }
 
     private def instanceAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.isAllowedAuthMethodInstance) throw new ConfigException(s"""auth_method: "$conf.authMethod" is not allowed.""")
+        if (!conf.isAllowedAuthMethodInstance) throw new ConfigException(s"""auth_method: "${conf.authMethod}" is not allowed.""")
         // NOTE: combination of InstanceProfileCredentialsProvider and ContainerCredentialsProvider
         new EC2ContainerCredentialsProviderWrapper
     }
 
     private def profileAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.isAllowedAuthMethodProfile) throw new ConfigException(s"""auth_method: "$conf.authMethod" is not allowed.""")
+        if (!conf.isAllowedAuthMethodProfile) throw new ConfigException(s"""auth_method: "${conf.authMethod}" is not allowed.""")
         if (!conf.profileFile.isPresent) return new ProfileCredentialsProvider(conf.profileName)
         val pf: ProfilesConfigFile = new ProfilesConfigFile(conf.profileFile.get())
         new ProfileCredentialsProvider(pf, conf.profileName)
@@ -144,7 +144,7 @@ case class Aws(conf: AwsConf)
 
     private def propertiesAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.isAllowedAuthMethodProperties) throw new ConfigException(s"""auth_method: "$conf.authMethod" is not allowed.""")
+        if (!conf.isAllowedAuthMethodProperties) throw new ConfigException(s"""auth_method: "${conf.authMethod}" is not allowed.""")
         new SystemPropertiesCredentialsProvider()
     }
 
@@ -156,9 +156,9 @@ case class Aws(conf: AwsConf)
 
     private def sessionAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
     {
-        if (!conf.accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "$conf.authMethod".""")
-        if (!conf.secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "$conf.authMethod".""")
-        if (!conf.sessionToken.isPresent) throw new ConfigException(s"""`session_token` must be set when `auth_method` is "$conf.authMethod".""")
+        if (!conf.accessKeyId.isPresent) throw new ConfigException(s"""`access_key_id` must be set when `auth_method` is "${conf.authMethod}".""")
+        if (!conf.secretAccessKey.isPresent) throw new ConfigException(s"""`secret_access_key` must be set when `auth_method` is "${conf.authMethod}".""")
+        if (!conf.sessionToken.isPresent) throw new ConfigException(s"""`session_token` must be set when `auth_method` is "${conf.authMethod}".""")
         val credentials: AWSCredentials = new BasicSessionCredentials(conf.accessKeyId.get(), conf.secretAccessKey.get(), conf.sessionToken.get())
         new AWSStaticCredentialsProvider(credentials)
     }
