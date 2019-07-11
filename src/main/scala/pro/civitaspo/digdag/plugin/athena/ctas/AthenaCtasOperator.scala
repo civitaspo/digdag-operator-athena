@@ -221,7 +221,7 @@ class AthenaCtasOperator(operatorName: String,
         subTask.set("profile_name", aws.conf.profileName)
         if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
         subTask.set("use_http_proxy", aws.conf.useHttpProxy)
-        if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+        subTask.set("region", aws.region)
         if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
         subTask

@@ -4,7 +4,6 @@ package pro.civitaspo.digdag.plugin.athena.query
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
-import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
 import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
@@ -120,8 +119,7 @@ class AthenaQueryOperator(operatorName: String,
             if (outputOptional.isPresent) outputOptional.get()
             else {
                 val accountId: String = aws.sts.getCallerIdentityAccountId
-                val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
-                s"s3://aws-athena-query-results-$accountId-$r"
+                s"s3://aws-athena-query-results-$accountId-${aws.region}"
             }
         }
     }
@@ -244,7 +242,7 @@ class AthenaQueryOperator(operatorName: String,
         subTask.set("profile_name", aws.conf.profileName)
         if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
         subTask.set("use_http_proxy", aws.conf.useHttpProxy)
-        if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+        subTask.set("region", aws.region)
         if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
         subTask

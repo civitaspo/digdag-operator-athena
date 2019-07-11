@@ -6,14 +6,12 @@ import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentia
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
+import com.amazonaws.regions.{AwsEnvVarOverrideRegionProvider, AwsProfileRegionProvider, AwsSystemPropertyRegionProvider, InstanceMetadataRegionProvider, Regions}
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
 import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
 import pro.civitaspo.digdag.plugin.athena.aws.sts.Sts
-
-import scala.util.Try
 
 case class Aws(conf: AwsConf)
 {
@@ -44,19 +42,41 @@ case class Aws(conf: AwsConf)
         Sts(this)
     }
 
+    lazy val region: String = {
+        conf.authMethod match {
+            case "env" =>
+                conf.region
+                    .or(Option(new AwsEnvVarOverrideRegionProvider().getRegion)
+                            .getOrElse(Regions.DEFAULT_REGION.getName))
+
+            case "instance" =>
+                conf.region
+                    .or(Option(new InstanceMetadataRegionProvider().getRegion)
+                            .getOrElse(Regions.DEFAULT_REGION.getName))
+
+            case "profile" =>
+                conf.region
+                    .or(Option(new AwsProfileRegionProvider().getRegion)
+                            .getOrElse(Regions.DEFAULT_REGION.getName))
+
+            case "properties" =>
+                conf.region
+                    .or(Option(new AwsSystemPropertyRegionProvider().getRegion)
+                            .getOrElse(Regions.DEFAULT_REGION.getName))
+
+            case "basic" | "anonymous" | "session" => conf.region.or(Regions.DEFAULT_REGION.getName)
+            case _                                 => conf.region.or(Regions.DEFAULT_REGION.getName)
+        }
+    }
+
     private def configureBuilderEndpointConfiguration[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): AwsClientBuilder[S, T] =
     {
-        if (conf.region.isPresent && conf.endpoint.isPresent) {
-            val ec = new EndpointConfiguration(conf.endpoint.get(), conf.region.get())
+        if (conf.endpoint.isPresent) {
+            val ec = new EndpointConfiguration(conf.endpoint.get(), region)
             builder.setEndpointConfiguration(ec)
         }
-        else if (conf.region.isPresent && !conf.endpoint.isPresent) {
-            builder.setRegion(conf.region.get())
-        }
-        else if (!conf.region.isPresent && conf.endpoint.isPresent) {
-            val r = Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName)
-            val ec = new EndpointConfiguration(conf.endpoint.get(), r)
-            builder.setEndpointConfiguration(ec)
+        else {
+            builder.setRegion(region)
         }
         builder
     }
