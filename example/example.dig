@@ -15,7 +15,10 @@ _export:
 +step2:
   echo>: ${athena}
 
-+stap3:
++step3:
+  athena.preview>: ${athena.last_query.id}
+
++stap4:
   athena.ctas>:
   select_query: template.sql
   database: ${database}
