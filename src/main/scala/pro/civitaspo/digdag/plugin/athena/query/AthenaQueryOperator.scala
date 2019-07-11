@@ -4,7 +4,7 @@ package pro.civitaspo.digdag.plugin.athena.query
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 
-import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionState}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
@@ -114,16 +114,6 @@ class AthenaQueryOperator(operatorName: String,
         s"$tokenPrefix-$sessionUuid-$queryHash-$random"
     }
 
-    protected lazy val output: AmazonS3URI = {
-        AmazonS3URI {
-            if (outputOptional.isPresent) outputOptional.get()
-            else {
-                val accountId: String = aws.sts.getCallerIdentityAccountId
-                s"s3://aws-athena-query-results-$accountId-${aws.region}"
-            }
-        }
-    }
-
     @deprecated private def showMessageIfUnsupportedOptionExists(): Unit =
     {
         if (params.getOptional("keep_metadata", classOf[Boolean]).isPresent) {
@@ -156,21 +146,10 @@ class AthenaQueryOperator(operatorName: String,
 
     protected def startQueryExecution: String =
     {
-        val req = buildStartQueryExecutionRequest
-        val r = withAthena(_.startQueryExecution(req))
-        r.getQueryExecutionId
-    }
-
-    protected def buildStartQueryExecutionRequest: StartQueryExecutionRequest =
-    {
-        val req = new StartQueryExecutionRequest()
-
-        req.setClientRequestToken(clientRequestToken)
-        if (database.isPresent) req.setQueryExecutionContext(new QueryExecutionContext().withDatabase(database.get()))
-        req.setQueryString(query)
-        req.setResultConfiguration(new ResultConfiguration().withOutputLocation(output.toString))
-
-        req
+        aws.athena.startQuery(query = query,
+                              database = Option(database.orNull),
+                              outputLocation = Option(outputOptional.orNull),
+                              requestToken = Option(clientRequestToken))
     }
 
     protected def pollingQueryExecution(execId: String): LastQuery =

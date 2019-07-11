@@ -10,6 +10,7 @@ import com.amazonaws.regions.{AwsEnvVarOverrideRegionProvider, AwsProfileRegionP
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
+import pro.civitaspo.digdag.plugin.athena.aws.athena.Athena
 import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
 import pro.civitaspo.digdag.plugin.athena.aws.sts.Sts
 
@@ -40,6 +41,11 @@ case class Aws(conf: AwsConf)
     def sts: Sts =
     {
         Sts(this)
+    }
+
+    def athena: Athena =
+    {
+        Athena(this)
     }
 
     lazy val region: String = {
