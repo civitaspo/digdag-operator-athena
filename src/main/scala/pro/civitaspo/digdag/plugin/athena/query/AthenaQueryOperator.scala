@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 import com.amazonaws.services.athena.model.{QueryExecution, QueryExecutionState}
 import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, SUCCEEDED}
-import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -58,7 +57,6 @@ class AthenaQueryOperator(operatorName: String,
     protected val queryOrFile: String = params.get("_command", classOf[String])
     protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
-    @deprecated protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
     protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
     protected val preview: Boolean = params.get("preview", classOf[Boolean], false)
 
@@ -102,26 +100,10 @@ class AthenaQueryOperator(operatorName: String,
         s"$tokenPrefix-$sessionUuid-$queryHash-$random"
     }
 
-    @deprecated private def showMessageIfUnsupportedOptionExists(): Unit =
-    {
-        if (params.getOptional("keep_metadata", classOf[Boolean]).isPresent) {
-            logger.warn("`keep_metadata` option has removed, and the behaviour is the same as `keep_metadata: true`.")
-        }
-        if (params.getOptional("save_mode", classOf[String]).isPresent) {
-            logger.warn("`save_mode` option has removed, and the behaviour is the same as `save_mode: append` .")
-        }
-        if (outputOptional.isPresent) {
-            logger.warn("`output` option will be removed, and the current default value will be always used.")
-        }
-    }
-
     override def runTask(): TaskResult =
     {
-        showMessageIfUnsupportedOptionExists()
-
         val execution: QueryExecution = aws.athena.runQuery(query = query,
                                                             database = Option(database.orNull),
-                                                            outputLocation = Option(outputOptional.orNull),
                                                             requestToken = Option(clientRequestToken),
                                                             successStates = Seq(SUCCEEDED),
                                                             failureStates = Seq(FAILED, CANCELLED),

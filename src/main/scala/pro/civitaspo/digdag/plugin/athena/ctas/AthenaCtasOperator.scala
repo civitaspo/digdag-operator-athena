@@ -215,7 +215,6 @@ class AthenaCtasOperator(operatorName: String,
         if (database.isPresent) subTask.set("database", database)
         subTask.set("timeout", timeout.toString)
         subTask.set("preview", false)
-        subTask.set("output", Optional.absent())
 
         subTask.set("auth_method", aws.conf.authMethod)
         subTask.set("profile_name", aws.conf.profileName)
