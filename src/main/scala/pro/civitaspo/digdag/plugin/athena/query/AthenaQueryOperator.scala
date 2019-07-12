@@ -2,17 +2,15 @@ package pro.civitaspo.digdag.plugin.athena.query
 
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.Duration
 
-import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionState}
-import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
+import com.amazonaws.services.athena.model.{QueryExecution, QueryExecutionState}
+import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, SUCCEEDED}
 import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
-import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.util.{Failure, Random, Success, Try}
@@ -24,21 +22,11 @@ class AthenaQueryOperator(operatorName: String,
                           templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine)
 {
-
-    object AmazonS3URI
-    {
-
-        def apply(path: String): AmazonS3URI =
-        {
-            new AmazonS3URI(path, false)
-        }
-    }
-
     case class LastQuery(
         id: String,
         database: Option[String] = None,
         query: String,
-        output: AmazonS3URI,
+        output: String,
         scanBytes: Option[Long] = None,
         execMillis: Option[Long] = None,
         state: QueryExecutionState,
@@ -56,7 +44,7 @@ class AthenaQueryOperator(operatorName: String,
                 id = qe.getQueryExecutionId,
                 database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
                 query = qe.getQuery,
-                output = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
+                output = qe.getResultConfiguration.getOutputLocation,
                 scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
                 execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
                 state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -131,8 +119,15 @@ class AthenaQueryOperator(operatorName: String,
     {
         showMessageIfUnsupportedOptionExists()
 
-        val execId: String = startQueryExecution
-        val lastQuery: LastQuery = pollingQueryExecution(execId)
+        val execution: QueryExecution = aws.athena.runQuery(query = query,
+                                                            database = Option(database.orNull),
+                                                            outputLocation = Option(outputOptional.orNull),
+                                                            requestToken = Option(clientRequestToken),
+                                                            successStates = Seq(SUCCEEDED),
+                                                            failureStates = Seq(FAILED, CANCELLED),
+                                                            timeout = timeout
+                                                            )
+        val lastQuery: LastQuery = LastQuery(execution)
 
         logger.info(s"[$operatorName] Executed ${lastQuery.id} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
         val p: Config = buildLastQueryParam(lastQuery)
@@ -144,53 +139,6 @@ class AthenaQueryOperator(operatorName: String,
         builder.build()
     }
 
-    protected def startQueryExecution: String =
-    {
-        aws.athena.startQuery(query = query,
-                              database = Option(database.orNull),
-                              outputLocation = Option(outputOptional.orNull),
-                              requestToken = Option(clientRequestToken))
-    }
-
-    protected def pollingQueryExecution(execId: String): LastQuery =
-    {
-        val req = new GetQueryExecutionRequest().withQueryExecutionId(execId)
-
-        RetryExecutorWrapper()
-            .withInitialRetryWait(Duration.ofSeconds(1L)) // TODO: make it configurable?
-            .withMaxRetryWait(Duration.ofSeconds(30L)) // TODO: make it configurable?
-            .withRetryLimit(Integer.MAX_VALUE)
-            .withWaitGrowRate(1.1) // TODO: make it configurable?
-            .withTimeout(timeout.getDuration)
-            .retryIf {
-                case _: RetryableException => true
-                case _                     => false
-            }
-            .onRetry { p: ParamInRetry =>
-                logger.info(s"[$operatorName] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
-            }
-            .onGiveup { p: ParamInGiveup =>
-                logger.error(
-                    s"[$operatorName] failed to execute query `$execId`. You can see last exception's stacktrace. (first exception message: ${p.firstException.getMessage}, last exception message: ${p.lastException.getMessage})",
-                    p.lastException
-                    )
-            }
-            .runInterruptible {
-                val r = withAthena(_.getQueryExecution(req))
-                val lastQuery = LastQuery(r.getQueryExecution)
-
-                lastQuery.state match {
-                    case SUCCEEDED =>
-                        logger.info(s"[$operatorName] query is `$SUCCEEDED`")
-                        lastQuery
-                    case FAILED    => throw new NotRetryableException(message = s"[$operatorName] query is `$FAILED`")
-                    case CANCELLED => throw new NotRetryableException(message = s"[$operatorName] query is `$CANCELLED`")
-                    case RUNNING   => throw new RetryableException(message = s"query is `$RUNNING`")
-                    case QUEUED    => throw new RetryableException(message = s"query is `$QUEUED`")
-                }
-            }
-    }
-
     protected def buildLastQueryParam(lastQuery: LastQuery): Config =
     {
         val ret = cf.create()
@@ -199,7 +147,7 @@ class AthenaQueryOperator(operatorName: String,
         lastQueryParam.set("id", lastQuery.id)
         lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
         lastQueryParam.set("query", lastQuery.query)
-        lastQueryParam.set("output", lastQuery.output.toString) // TODO: It's not always csv, so should change.
+        lastQueryParam.set("output", lastQuery.output.toString)
         lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))
         lastQueryParam.set("exec_millis", lastQuery.execMillis.getOrElse(Optional.absent()))
         lastQueryParam.set("state", lastQuery.state)

@@ -2,7 +2,9 @@ package pro.civitaspo.digdag.plugin.athena.aws.athena
 
 
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
-import com.amazonaws.services.athena.model.{QueryExecutionContext, ResultConfiguration, StartQueryExecutionRequest}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryResultsRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultSet, StartQueryExecutionRequest}
+import io.digdag.util.DurationParam
+import org.slf4j.Logger
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
 
@@ -31,11 +33,11 @@ class Athena(aws: Aws)
         finally athena.shutdown()
     }
 
-    def startQuery(query: String,
-                   database: Option[String] = None,
-                   workGroup: Option[String] = None,
-                   outputLocation: Option[String] = None,
-                   requestToken: Option[String] = None): String =
+    def startQueryExecution(query: String,
+                            database: Option[String] = None,
+                            workGroup: Option[String] = None,
+                            outputLocation: Option[String] = None,
+                            requestToken: Option[String] = None): String =
     {
         val req = new StartQueryExecutionRequest()
         req.setQueryString(query)
@@ -46,6 +48,77 @@ class Athena(aws: Aws)
         requestToken.foreach(req.setClientRequestToken)
 
         withAthena(_.startQueryExecution(req)).getQueryExecutionId
+    }
+
+    def getQueryExecution(executionId: String): QueryExecution =
+    {
+        withAthena(_.getQueryExecution(new GetQueryExecutionRequest().withQueryExecutionId(executionId))).getQueryExecution
+    }
+
+    def waitQueryExecution(executionId: String,
+                           successStates: Seq[QueryExecutionState],
+                           failureStates: Seq[QueryExecutionState],
+                           timeout: DurationParam,
+                           loggerOption: Option[Logger] = None): Unit =
+    {
+        val waiter = AthenaQueryWaiter(athena = this,
+                                       successStats = successStates,
+                                       failureStats = failureStates,
+                                       timeout = timeout,
+                                       loggerOption = loggerOption)
+        waiter.wait(executionId)
+    }
+
+    def runQuery(query: String,
+                 database: Option[String] = None,
+                 workGroup: Option[String] = None,
+                 outputLocation: Option[String] = None,
+                 requestToken: Option[String] = None,
+                 successStates: Seq[QueryExecutionState],
+                 failureStates: Seq[QueryExecutionState],
+                 timeout: DurationParam,
+                 loggerOption: Option[Logger] = None): QueryExecution =
+    {
+        val executionId: String = startQueryExecution(query = query,
+                                                      database = database,
+                                                      workGroup = workGroup,
+                                                      outputLocation = outputLocation,
+                                                      requestToken = requestToken)
+
+        waitQueryExecution(executionId = executionId,
+                           successStates = successStates,
+                           failureStates = failureStates,
+                           timeout = timeout,
+                           loggerOption = loggerOption)
+
+        getQueryExecution(executionId = executionId)
+    }
+
+    def preview(executionId: String,
+                limit: Int): ResultSet =
+    {
+        def requestRecursive(nextToken: Option[String] = None): ResultSet =
+        {
+            val req: GetQueryResultsRequest = new GetQueryResultsRequest()
+                .withQueryExecutionId(executionId)
+                .withMaxResults(limit)
+
+            nextToken.foreach(req.setNextToken)
+
+            val res = withAthena(_.getQueryResults(req))
+            val rs = res.getResultSet.clone()
+
+            Option(res.getNextToken).foreach { token =>
+                val next = requestRecursive(Option(token))
+                val rows = rs.getRows
+                rows.addAll(next.getRows)
+                rs.setRows(rows)
+            }
+
+            rs
+        }
+
+        requestRecursive()
     }
 
 }

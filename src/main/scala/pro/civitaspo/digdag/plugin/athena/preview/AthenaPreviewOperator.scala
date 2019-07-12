@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.preview
 
 
-import com.amazonaws.services.athena.model.{GetQueryResultsRequest, GetQueryResultsResult}
+import com.amazonaws.services.athena.model.ResultSet
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
@@ -41,11 +41,11 @@ class AthenaPreviewOperator(operatorName: String,
     {
 
         def apply(id: String,
-                  r: GetQueryResultsResult): LastPreview =
+                  rs: ResultSet): LastPreview =
         {
             new LastPreview(
                 id = id,
-                columns = r.getResultSet.getResultSetMetadata.getColumnInfo.asScala.map { ci =>
+                columns = rs.getResultSetMetadata.getColumnInfo.asScala.map { ci =>
                     LastPreviewColumnInfo(
                         caseSensitive = Try(Option(Boolean.unbox(ci.getCaseSensitive))).getOrElse(None),
                         catalog = Try(Option(ci.getCatalogName)).getOrElse(None),
@@ -59,7 +59,7 @@ class AthenaPreviewOperator(operatorName: String,
                         `type` = ci.getType
                         )
                 },
-                rows = r.getResultSet.getRows.asScala.map(_.getData.asScala.map(_.getVarCharValue)).tail // the first row is column names
+                rows = rs.getRows.asScala.map(_.getData.asScala.map(_.getVarCharValue)).tail // the first row is column names
                 )
         }
     }
@@ -81,27 +81,8 @@ class AthenaPreviewOperator(operatorName: String,
 
     protected def preview(): LastPreview =
     {
-        def requestRecursive(nextToken: Option[String] = None): LastPreview =
-        {
-            val req: GetQueryResultsRequest = new GetQueryResultsRequest()
-                .withQueryExecutionId(execId)
-                .withMaxResults(maxRows)
-
-            if (nextToken.isDefined) req.setNextToken(nextToken.get)
-
-            logger.info(s"[$operatorName] req => $req")
-            val res = withAthena(_.getQueryResults(req))
-            val previewResult = LastPreview(execId, res)
-
-            Option(res.getNextToken) match {
-                case None        => previewResult
-                case Some(token) =>
-                    val next = requestRecursive(Option(token))
-                    LastPreview(id = execId, columns = previewResult.columns, rows = previewResult.rows ++ next.rows)
-            }
-        }
-
-        requestRecursive()
+        val rs: ResultSet = aws.athena.preview(execId, maxRows)
+        LastPreview(execId, rs)
     }
 
     protected def buildLastPreviewParam(lastPreview: LastPreview): Config =

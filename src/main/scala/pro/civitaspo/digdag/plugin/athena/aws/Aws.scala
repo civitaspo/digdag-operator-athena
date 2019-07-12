@@ -14,17 +14,9 @@ import pro.civitaspo.digdag.plugin.athena.aws.athena.Athena
 import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
 import pro.civitaspo.digdag.plugin.athena.aws.sts.Sts
 
+
 case class Aws(conf: AwsConf)
 {
-
-    @deprecated
-    def withAthena[T](f: AmazonAthena => T): T =
-    {
-        val athena = buildService(AmazonAthenaClientBuilder.standard())
-        try f(athena)
-        finally athena.shutdown()
-    }
-
     private[aws] def buildService[S <: AwsClientBuilder[S, T], T](builder: AwsClientBuilder[S, T]): T =
     {
         configureBuilderEndpointConfiguration(builder)

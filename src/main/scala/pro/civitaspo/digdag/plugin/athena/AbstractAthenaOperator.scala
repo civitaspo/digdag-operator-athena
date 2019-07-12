@@ -30,12 +30,6 @@ abstract class AbstractAthenaOperator(operatorName: String,
     protected val secrets: SecretProvider = context.getSecrets.getSecrets("athena")
     protected val sessionUuid: String = params.get("session_uuid", classOf[String])
 
-
-    protected def withAthena[T](f: AmazonAthena => T): T =
-    {
-        aws.withAthena(f)
-    }
-
     protected val aws: Aws = Aws(
         AwsConf(
             isAllowedAuthMethodEnv = systemConfig.get("athena.allow_auth_method_env", classOf[Boolean], false),
