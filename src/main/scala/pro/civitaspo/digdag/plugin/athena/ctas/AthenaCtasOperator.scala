@@ -75,6 +75,7 @@ class AthenaCtasOperator(operatorName: String,
     protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     protected val table: String = params.get("table", classOf[String], defaultTableName)
+    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
     protected val output: Optional[String] = params.getOptional("output", classOf[String])
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
@@ -213,6 +214,7 @@ class AthenaCtasOperator(operatorName: String,
         subTask.set("_command", query)
         subTask.set("token_prefix", tokenPrefix)
         if (database.isPresent) subTask.set("database", database)
+        if (workGroup.isPresent) subTask.set("workgroup", workGroup)
         subTask.set("timeout", timeout.toString)
         subTask.set("preview", false)
 

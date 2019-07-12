@@ -24,6 +24,7 @@ class AthenaQueryOperator(operatorName: String,
     case class LastQuery(
         id: String,
         database: Option[String] = None,
+        workGroup: Option[String] = None,
         query: String,
         output: String,
         scanBytes: Option[Long] = None,
@@ -42,6 +43,7 @@ class AthenaQueryOperator(operatorName: String,
             new LastQuery(
                 id = qe.getQueryExecutionId,
                 database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
+                workGroup = Try(Option(qe.getWorkGroup)).getOrElse(None),
                 query = qe.getQuery,
                 output = qe.getResultConfiguration.getOutputLocation,
                 scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
@@ -57,6 +59,7 @@ class AthenaQueryOperator(operatorName: String,
     protected val queryOrFile: String = params.get("_command", classOf[String])
     protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
+    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
     protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
     protected val preview: Boolean = params.get("preview", classOf[Boolean], false)
 
@@ -104,6 +107,7 @@ class AthenaQueryOperator(operatorName: String,
     {
         val execution: QueryExecution = aws.athena.runQuery(query = query,
                                                             database = Option(database.orNull),
+                                                            workGroup = Option(workGroup.orNull()),
                                                             requestToken = Option(clientRequestToken),
                                                             successStates = Seq(SUCCEEDED),
                                                             failureStates = Seq(FAILED, CANCELLED),
@@ -128,6 +132,7 @@ class AthenaQueryOperator(operatorName: String,
 
         lastQueryParam.set("id", lastQuery.id)
         lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
+        lastQueryParam.set("workgroup", lastQuery.workGroup.getOrElse(Optional.absent()))
         lastQueryParam.set("query", lastQuery.query)
         lastQueryParam.set("output", lastQuery.output.toString)
         lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))

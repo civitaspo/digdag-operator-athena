@@ -87,6 +87,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.query>**: The SQL query statements or file location (in local or Amazon S3) to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${random string}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
 
@@ -94,6 +95,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **athena.last_query.id**: The unique identifier for each query execution. (string)
 - **athena.last_query.database**: The name of the database. (string)
+- **workgroup**: The name of the workgroup in which the query is being started. (string)
 - **athena.last_query.query**: The SQL query statements which the query execution ran. (string)
 - **athena.last_query.output**: The location in Amazon S3 where your query results are stored. (string)
 - **athena.last_query.scan_bytes**: The number of bytes in the data that was queried. (long)
@@ -133,6 +135,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **select_query**: The select SQL statements or file location (in local or Amazon S3) to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **database**: The database name for query execution context. (string, optional)
 - **table**: The table name for the new table (string, default: `digdag_athena_ctas_${session_uuid.replaceAll("-", "")}_${random}`)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **output**: Output location for data created by CTAS (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>/Unsaved/${YEAR}/${MONTH}/${DAY}/${athena_query_id}/"`)
 - **format**: The data format for the CTAS query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: `"parquet"`)
 - **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: `"snappy"`)
