@@ -8,15 +8,7 @@ import org.slf4j.Logger
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
 
-object Athena
-{
-    def apply(aws: Aws): Athena =
-    {
-        new Athena(aws)
-    }
-}
-
-class Athena(aws: Aws)
+case class Athena(aws: Aws)
     extends AwsService(aws)
 {
     val DEFAULT_WORKGROUP = "primary"

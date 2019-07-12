@@ -1,5 +1,6 @@
 package pro.civitaspo.digdag.plugin.athena.aws.sts
 
+
 import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
 import com.amazonaws.services.securitytoken.model.{AssumeRoleRequest, GetCallerIdentityRequest, PolicyDescriptorType}
@@ -7,16 +8,8 @@ import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
 import scala.collection.JavaConverters._
 
-object Sts
-{
-    def apply(aws: Aws): Sts =
-    {
-        new Sts(aws)
-    }
-}
 
-
-class Sts(aws: Aws)
+case class Sts(aws: Aws)
     extends AwsService(aws)
 {
 

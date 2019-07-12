@@ -7,7 +7,6 @@ import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFil
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.{AwsEnvVarOverrideRegionProvider, AwsProfileRegionProvider, AwsSystemPropertyRegionProvider, InstanceMetadataRegionProvider, Regions}
-import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
 import pro.civitaspo.digdag.plugin.athena.aws.athena.Athena
@@ -25,20 +24,9 @@ case class Aws(conf: AwsConf)
             .build()
     }
 
-    def s3: S3 =
-    {
-        S3(this)
-    }
-
-    def sts: Sts =
-    {
-        Sts(this)
-    }
-
-    def athena: Athena =
-    {
-        Athena(this)
-    }
+    lazy val s3: S3 = S3(this)
+    lazy val sts: Sts = Sts(this)
+    lazy val athena: Athena = Athena(this)
 
     lazy val region: String = {
         conf.authMethod match {

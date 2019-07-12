@@ -7,15 +7,7 @@ import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 import scala.collection.JavaConverters._
 
 
-object S3
-{
-    def apply(aws: Aws): S3 =
-    {
-        new S3(aws)
-    }
-}
-
-class S3(aws: Aws)
+case class S3(aws: Aws)
     extends AwsService(aws)
 {
     def withS3[A](f: AmazonS3 => A): A =
