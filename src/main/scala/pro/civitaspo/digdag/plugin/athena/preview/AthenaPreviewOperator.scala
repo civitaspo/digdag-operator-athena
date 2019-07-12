@@ -18,7 +18,7 @@ class AthenaPreviewOperator(operatorName: String,
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine)
 {
 
-    protected val execId: String = params.get("_command", classOf[String])
+    protected val executionId: String = params.get("_command", classOf[String])
     protected val maxRows: Int = params.get("max_rows", classOf[Int], 10)
 
     protected case class LastPreview(id: String,
@@ -81,8 +81,8 @@ class AthenaPreviewOperator(operatorName: String,
 
     protected def preview(): LastPreview =
     {
-        val rs: ResultSet = aws.athena.preview(execId, maxRows)
-        LastPreview(execId, rs)
+        val rs: ResultSet = aws.athena.preview(executionId, maxRows)
+        LastPreview(executionId, rs)
     }
 
     protected def buildLastPreviewParam(lastPreview: LastPreview): Config =
