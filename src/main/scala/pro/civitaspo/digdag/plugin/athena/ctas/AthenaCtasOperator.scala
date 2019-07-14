@@ -3,8 +3,6 @@ package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
-import com.amazonaws.services.s3.AmazonS3URI
-import com.amazonaws.services.s3.model.{DeleteObjectsRequest, DeleteObjectsResult}
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
@@ -20,16 +18,6 @@ class AthenaCtasOperator(operatorName: String,
                          templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine)
 {
-
-    object AmazonS3URI
-    {
-
-        def apply(path: String): AmazonS3URI =
-        {
-            new AmazonS3URI(path, false)
-        }
-    }
-
     sealed abstract class TableMode
 
     object TableMode
@@ -83,9 +71,20 @@ class AthenaCtasOperator(operatorName: String,
         s"digdag_athena_ctas_${normalizedSessionUuid}_$random"
     }
 
-    protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
+    @deprecated(message = "Use athena.ctas> instead.", since = "0.2.0")
+    protected val _selectQueryOrFile: Optional[String] = params.getOptional("select_query", classOf[String])
+    protected val selectQueryOrFile: String = {
+        val _command = params.getOptional("_command", classOf[String])
+        if (_selectQueryOrFile.isPresent && _command.isPresent) throw new ConfigException("Use athena.ctas> instead of 'select_query'")
+        else if (_command.isPresent) _command.get()
+        else {
+            logger.warn("'select_query' is deprecated. Use athena.ctas> instead.")
+            _selectQueryOrFile.get()
+        }
+    }
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     protected val table: String = params.get("table", classOf[String], defaultTableName)
+    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
     protected val output: Optional[String] = params.getOptional("output", classOf[String])
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
@@ -104,16 +103,15 @@ class AthenaCtasOperator(operatorName: String,
             if (selectQueryOrFile.startsWith("s3://")) loadQueryOnS3(selectQueryOrFile)
             else loadQueryOnLocalFileSystem(selectQueryOrFile)
 
-        t.getOrElse(selectQueryOrFile)
+        t.getOrElse(selectQueryOrFile).replaceAll(";\\s+?$", "")
     }
 
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-                        val uri: AmazonS3URI = AmazonS3URI(uriString)
-                        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-                        templateEngine.template(content, params)
-                    }
+            val content = aws.s3.readObject(uriString)
+            templateEngine.template(content, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on S3.")
             case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
@@ -124,9 +122,9 @@ class AthenaCtasOperator(operatorName: String,
     protected def loadQueryOnLocalFileSystem(path: String): Try[String] =
     {
         val t = Try {
-                        val f = workspace.getFile(path)
-                        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-                    }
+            val f = workspace.getFile(path)
+            workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on LocalFileSystem.")
             case Failure(e) => logger.warn(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")
@@ -160,17 +158,12 @@ class AthenaCtasOperator(operatorName: String,
 
     protected def hasObjects(location: String): Boolean =
     {
-        val uri: AmazonS3URI = AmazonS3URI(location)
-        !withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.isEmpty
+        aws.s3.ls(location).nonEmpty
     }
 
     protected def rmObjects(location: String): Unit =
     {
-        val uri: AmazonS3URI = AmazonS3URI(location)
-        val keys: Seq[String] = withS3(_.listObjectsV2(uri.getBucket, uri.getKey)).getObjectSummaries.asScala.map(_.getKey)
-        if (keys.isEmpty) return
-        val r: DeleteObjectsResult = withS3(_.deleteObjects(new DeleteObjectsRequest(uri.getBucket).withKeys(keys: _*)))
-        r.getDeletedObjects.asScala.foreach(o => logger.info(s"Deleted: s3://${uri.getBucket}/${o.getKey}"))
+        aws.s3.rm_r(location).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
     }
 
     protected def generateCtasQuery(): String =
@@ -230,15 +223,15 @@ class AthenaCtasOperator(operatorName: String,
         subTask.set("_command", query)
         subTask.set("token_prefix", tokenPrefix)
         if (database.isPresent) subTask.set("database", database)
+        if (workGroup.isPresent) subTask.set("workgroup", workGroup)
         subTask.set("timeout", timeout.toString)
         subTask.set("preview", false)
-        subTask.set("output", Optional.absent())
 
         subTask.set("auth_method", aws.conf.authMethod)
         subTask.set("profile_name", aws.conf.profileName)
         if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
         subTask.set("use_http_proxy", aws.conf.useHttpProxy)
-        if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+        subTask.set("region", aws.region)
         if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
         subTask

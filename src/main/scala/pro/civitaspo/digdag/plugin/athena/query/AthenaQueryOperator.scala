@@ -2,19 +2,14 @@ package pro.civitaspo.digdag.plugin.athena.query
 
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.Duration
 
-import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
-import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, StartQueryExecutionRequest}
-import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING, SUCCEEDED}
-import com.amazonaws.services.s3.AmazonS3URI
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
+import com.amazonaws.services.athena.model.{QueryExecution, QueryExecutionState}
+import com.amazonaws.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, SUCCEEDED}
 import com.google.common.base.Optional
 import com.google.common.collect.ImmutableList
 import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
-import pro.civitaspo.digdag.plugin.athena.wrapper.{NotRetryableException, ParamInGiveup, ParamInRetry, RetryableException, RetryExecutorWrapper}
 import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.util.{Failure, Random, Success, Try}
@@ -26,21 +21,12 @@ class AthenaQueryOperator(operatorName: String,
                           templateEngine: TemplateEngine)
     extends AbstractAthenaOperator(operatorName, context, systemConfig, templateEngine)
 {
-
-    object AmazonS3URI
-    {
-
-        def apply(path: String): AmazonS3URI =
-        {
-            new AmazonS3URI(path, false)
-        }
-    }
-
     case class LastQuery(
         id: String,
         database: Option[String] = None,
+        workGroup: Option[String] = None,
         query: String,
-        output: AmazonS3URI,
+        output: String,
         scanBytes: Option[Long] = None,
         execMillis: Option[Long] = None,
         state: QueryExecutionState,
@@ -57,8 +43,9 @@ class AthenaQueryOperator(operatorName: String,
             new LastQuery(
                 id = qe.getQueryExecutionId,
                 database = Try(Option(qe.getQueryExecutionContext.getDatabase)).getOrElse(None),
+                workGroup = Try(Option(qe.getWorkGroup)).getOrElse(None),
                 query = qe.getQuery,
-                output = AmazonS3URI(qe.getResultConfiguration.getOutputLocation),
+                output = qe.getResultConfiguration.getOutputLocation,
                 scanBytes = Try(Option(qe.getStatistics.getDataScannedInBytes.toLong)).getOrElse(None),
                 execMillis = Try(Option(qe.getStatistics.getEngineExecutionTimeInMillis.toLong)).getOrElse(None),
                 state = QueryExecutionState.fromValue(qe.getStatus.getState),
@@ -72,9 +59,9 @@ class AthenaQueryOperator(operatorName: String,
     protected val queryOrFile: String = params.get("_command", classOf[String])
     protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena")
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
-    @deprecated protected val outputOptional: Optional[String] = params.getOptional("output", classOf[String])
+    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
     protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
-    protected val preview: Boolean = params.get("preview", classOf[Boolean], true)
+    protected val preview: Boolean = params.get("preview", classOf[Boolean], false)
 
     protected lazy val query: String = {
         val t: Try[String] =
@@ -87,10 +74,9 @@ class AthenaQueryOperator(operatorName: String,
     protected def loadQueryOnS3(uriString: String): Try[String] =
     {
         val t = Try {
-                        val uri: AmazonS3URI = AmazonS3URI(uriString)
-                        val content = withS3(_.getObjectAsString(uri.getBucket, uri.getKey))
-                        templateEngine.template(content, params)
-                    }
+            val content = aws.s3.readObject(uriString)
+            templateEngine.template(content, params)
+        }
         t match {
             case Success(_) => logger.info("Succeeded to load the query on S3.")
             case Failure(e) => logger.warn(s"Failed to load the query on S3.: ${e.getMessage}")
@@ -101,9 +87,9 @@ class AthenaQueryOperator(operatorName: String,
     protected def loadQueryOnLocalFileSystem(path: String): Try[String] =
     {
         val t = Try {
-                        val f = workspace.getFile(path)
-                        workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
-                    }
+            val f = workspace.getFile(path)
+            workspace.templateFile(templateEngine, f.getPath, UTF_8, params)
+        }
         t match {
             case Success(_) => logger.debug("Succeeded to load the query on LocalFileSystem.")
             case Failure(e) => logger.debug(s"Failed to load the query on LocalFileSystem.: ${e.getMessage}")
@@ -117,36 +103,17 @@ class AthenaQueryOperator(operatorName: String,
         s"$tokenPrefix-$sessionUuid-$queryHash-$random"
     }
 
-    protected lazy val output: AmazonS3URI = {
-        AmazonS3URI {
-                        if (outputOptional.isPresent) outputOptional.get()
-                        else {
-                            val accountId: String = withSts(_.getCallerIdentity(new GetCallerIdentityRequest())).getAccount
-                            val r = aws.conf.region.or(Try(new DefaultAwsRegionProviderChain().getRegion).getOrElse(Regions.DEFAULT_REGION.getName))
-                            s"s3://aws-athena-query-results-$accountId-$r"
-                        }
-                    }
-    }
-
-    @deprecated private def showMessageIfUnsupportedOptionExists(): Unit =
-    {
-        if (params.getOptional("keep_metadata", classOf[Boolean]).isPresent) {
-            logger.warn("`keep_metadata` option has removed, and the behaviour is the same as `keep_metadata: true`.")
-        }
-        if (params.getOptional("save_mode", classOf[String]).isPresent) {
-            logger.warn("`save_mode` option has removed, and the behaviour is the same as `save_mode: append` .")
-        }
-        if (outputOptional.isPresent) {
-            logger.warn("`output` option will be removed, and the current default value will be always used.")
-        }
-    }
-
     override def runTask(): TaskResult =
     {
-        showMessageIfUnsupportedOptionExists()
-
-        val execId: String = startQueryExecution
-        val lastQuery: LastQuery = pollingQueryExecution(execId)
+        val execution: QueryExecution = aws.athena.runQuery(query = query,
+                                                            database = Option(database.orNull),
+                                                            workGroup = Option(workGroup.orNull()),
+                                                            requestToken = Option(clientRequestToken),
+                                                            successStates = Seq(SUCCEEDED),
+                                                            failureStates = Seq(FAILED, CANCELLED),
+                                                            timeout = timeout
+                                                            )
+        val lastQuery: LastQuery = LastQuery(execution)
 
         logger.info(s"[$operatorName] Executed ${lastQuery.id} (scan: ${lastQuery.scanBytes.orNull} bytes, time: ${lastQuery.execMillis.orNull}ms)")
         val p: Config = buildLastQueryParam(lastQuery)
@@ -158,64 +125,6 @@ class AthenaQueryOperator(operatorName: String,
         builder.build()
     }
 
-    protected def startQueryExecution: String =
-    {
-        val req = buildStartQueryExecutionRequest
-        val r = withAthena(_.startQueryExecution(req))
-        r.getQueryExecutionId
-    }
-
-    protected def buildStartQueryExecutionRequest: StartQueryExecutionRequest =
-    {
-        val req = new StartQueryExecutionRequest()
-
-        req.setClientRequestToken(clientRequestToken)
-        if (database.isPresent) req.setQueryExecutionContext(new QueryExecutionContext().withDatabase(database.get()))
-        req.setQueryString(query)
-        req.setResultConfiguration(new ResultConfiguration().withOutputLocation(output.toString))
-
-        req
-    }
-
-    protected def pollingQueryExecution(execId: String): LastQuery =
-    {
-        val req = new GetQueryExecutionRequest().withQueryExecutionId(execId)
-
-        RetryExecutorWrapper()
-            .withInitialRetryWait(Duration.ofSeconds(1L)) // TODO: make it configurable?
-            .withMaxRetryWait(Duration.ofSeconds(30L)) // TODO: make it configurable?
-            .withRetryLimit(Integer.MAX_VALUE)
-            .withWaitGrowRate(1.1) // TODO: make it configurable?
-            .withTimeout(timeout.getDuration)
-            .retryIf {
-                         case _: RetryableException => true
-                         case _                     => false
-                     }
-            .onRetry { p: ParamInRetry =>
-                logger.info(s"[$operatorName] polling ${p.e.getMessage} (next: ${p.retryCount}, total wait: ${p.totalWaitMillis} ms)")
-                     }
-            .onGiveup { p: ParamInGiveup =>
-                logger.error(
-                    s"[$operatorName] failed to execute query `$execId`. You can see last exception's stacktrace. (first exception message: ${p.firstException.getMessage}, last exception message: ${p.lastException.getMessage})",
-                    p.lastException
-                    )
-                      }
-            .runInterruptible {
-                                  val r = withAthena(_.getQueryExecution(req))
-                                  val lastQuery = LastQuery(r.getQueryExecution)
-
-                                  lastQuery.state match {
-                                      case SUCCEEDED =>
-                                          logger.info(s"[$operatorName] query is `$SUCCEEDED`")
-                                          lastQuery
-                                      case FAILED    => throw new NotRetryableException(message = s"[$operatorName] query is `$FAILED`")
-                                      case CANCELLED => throw new NotRetryableException(message = s"[$operatorName] query is `$CANCELLED`")
-                                      case RUNNING   => throw new RetryableException(message = s"query is `$RUNNING`")
-                                      case QUEUED    => throw new RetryableException(message = s"query is `$QUEUED`")
-                                  }
-                              }
-    }
-
     protected def buildLastQueryParam(lastQuery: LastQuery): Config =
     {
         val ret = cf.create()
@@ -223,8 +132,9 @@ class AthenaQueryOperator(operatorName: String,
 
         lastQueryParam.set("id", lastQuery.id)
         lastQueryParam.set("database", lastQuery.database.getOrElse(Optional.absent()))
+        lastQueryParam.set("workgroup", lastQuery.workGroup.getOrElse(Optional.absent()))
         lastQueryParam.set("query", lastQuery.query)
-        lastQueryParam.set("output", lastQuery.output.toString) // TODO: It's not always csv, so should change.
+        lastQueryParam.set("output", lastQuery.output.toString)
         lastQueryParam.set("scan_bytes", lastQuery.scanBytes.getOrElse(Optional.absent()))
         lastQueryParam.set("exec_millis", lastQuery.execMillis.getOrElse(Optional.absent()))
         lastQueryParam.set("state", lastQuery.state)
@@ -246,7 +156,7 @@ class AthenaQueryOperator(operatorName: String,
         subTask.set("profile_name", aws.conf.profileName)
         if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
         subTask.set("use_http_proxy", aws.conf.useHttpProxy)
-        if (aws.conf.region.isPresent) subTask.set("region", aws.conf.region.get())
+        subTask.set("region", aws.region)
         if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
 
         subTask
