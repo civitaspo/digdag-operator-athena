@@ -3,7 +3,6 @@ package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
-import com.amazonaws.services.s3.AmazonS3URI
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
@@ -72,7 +71,17 @@ class AthenaCtasOperator(operatorName: String,
         s"digdag_athena_ctas_${normalizedSessionUuid}_$random"
     }
 
-    protected val selectQueryOrFile: String = params.get("select_query", classOf[String])
+    @deprecated(message = "Use athena.ctas> instead.", since = "0.2.0")
+    protected val _selectQueryOrFile: Optional[String] = params.getOptional("select_query", classOf[String])
+    protected val selectQueryOrFile: String = {
+        val _command = params.getOptional("_command", classOf[String])
+        if (_selectQueryOrFile.isPresent && _command.isPresent) throw new ConfigException("Use athena.ctas> instead of 'select_query'")
+        else if (_command.isPresent) _command.get()
+        else {
+            logger.warn("'select_query' is deprecated. Use athena.ctas> instead.")
+            _selectQueryOrFile.get()
+        }
+    }
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     protected val table: String = params.get("table", classOf[String], defaultTableName)
     protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
