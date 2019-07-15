@@ -8,7 +8,7 @@ import io.digdag.client.config.{Config, ConfigKey}
 import io.digdag.spi.{OperatorContext, TaskResult, TemplateEngine}
 import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 class AthenaPreviewOperator(operatorName: String,
@@ -45,7 +45,7 @@ class AthenaPreviewOperator(operatorName: String,
         {
             new LastPreview(
                 id = id,
-                columns = rs.getResultSetMetadata.getColumnInfo.asScala.map { ci =>
+                columns = rs.getResultSetMetadata.getColumnInfo.asScala.toSeq.map { ci =>
                     LastPreviewColumnInfo(
                         caseSensitive = Try(Option(Boolean.unbox(ci.getCaseSensitive))).getOrElse(None),
                         catalog = Try(Option(ci.getCatalogName)).getOrElse(None),
@@ -59,7 +59,7 @@ class AthenaPreviewOperator(operatorName: String,
                         `type` = ci.getType
                         )
                 },
-                rows = rs.getRows.asScala.map(_.getData.asScala.map(_.getVarCharValue)).tail // the first row is column names
+                rows = rs.getRows.asScala.toSeq.map(_.getData.asScala.toSeq.map(_.getVarCharValue)).tail // the first row is column names
                 )
         }
     }

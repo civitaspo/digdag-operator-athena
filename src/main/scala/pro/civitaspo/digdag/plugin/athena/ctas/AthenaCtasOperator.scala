@@ -9,7 +9,7 @@ import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, Template
 import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Random, Success, Try}
 
 class AthenaCtasOperator(operatorName: String,
@@ -89,8 +89,8 @@ class AthenaCtasOperator(operatorName: String,
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
     protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
-    protected val partitionedBy: Seq[String] = params.getListOrEmpty("partitioned_by", classOf[String]).asScala
-    protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala
+    protected val partitionedBy: Seq[String] = params.getListOrEmpty("partitioned_by", classOf[String]).asScala.toSeq
+    protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala.toSeq
     protected val bucketCount: Optional[Int] = params.getOptional("bucket_count", classOf[Int])
     protected val additionalProperties: Map[String, String] = params.getMapOrEmpty("additional_properties", classOf[String], classOf[String]).asScala.toMap
     protected val tableMode: TableMode = TableMode(params.get("table_mode", classOf[String], "default"))

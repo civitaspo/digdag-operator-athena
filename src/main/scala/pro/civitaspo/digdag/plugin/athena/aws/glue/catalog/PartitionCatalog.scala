@@ -5,7 +5,7 @@ import com.amazonaws.services.glue.model.{Column, CreatePartitionRequest, Delete
 import io.digdag.client.config.ConfigException
 import pro.civitaspo.digdag.plugin.athena.aws.glue.Glue
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 
@@ -106,7 +106,7 @@ case class PartitionCatalog(glue: Glue)
     {
         val t = glue.table.describe(catalogIdOption, database, table)
         val sd = t.getStorageDescriptor
-        val pVals: Seq[String] = t.getPartitionKeys.asScala.map { c =>
+        val pVals: Seq[String] = t.getPartitionKeys.asScala.toSeq.map { c =>
             partitionKv.getOrElse(c.getName, throw new ConfigException(
                 s"Table[$database.$table] has a column${c.toString} as a partition," +
                     s" but partitionKv ${partitionKv.toString()} does not have this."

@@ -9,8 +9,8 @@ version = '0.2.0'
 
 def digdagVersion = '0.9.37'
 def awsSdkVersion = "1.11.587"
-def scalaSemanticVersion = "2.12.8"
-def depScalaVersion = "2.12"
+def scalaSemanticVersion = "2.13.0"
+def depScalaVersion = "2.13"
 
 repositories {
     mavenCentral()
