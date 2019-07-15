@@ -82,6 +82,8 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ## Configuration for `athena.add_partition>` operator
 
+### Options
+
 - **database**: The name of the database. (string, required)
 - **table**: The name of the partitioned table. (string, required)
 - **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
@@ -97,11 +99,41 @@ Nothing
 
 ## Configuration for `athena.drop_partition>` operator
 
+### Options
+
 - **database**: The name of the database. (string, required)
 - **table**: The name of the partitioned table. (string, required)
 - **partition_kv**: key-value pairs for partitioning (string to string map, required)
 - **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
 - **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.apas>` operator
+
+`apas` means *Add a partition as select* that creates a partition the query result is stored.
+
+### Options
+
+- **athena.apas>**: The select SQL statements or file location (in local or Amazon S3) to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
+- **database**: The name of the database that has the partitioned table. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
+    - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
+- **save_mode**: Specify the expected behavior. Available values are `"skip_if_exists"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
+    - `"skip_if_exists"`: Skip processing if the partition or the location exists.
+    - `"error_if_exists"`: Raise error if the partition or the location exists.
+    - `"overwrite"`: Always recreate the partition and the location if exists. This operation is not atomic.
+- **bucketed_by**: An array list of buckets to bucket data. If omitted, Athena does not bucket your data in this query. (array of string, optional)
+- **bucket_count**: The number of buckets for bucketing your data. If omitted, Athena does not bucket your data. (integer, optional)
+- **additional_properties**: Additional properties for CTAS that is used `athena.apas>` internally. These are used for CTAS WITH clause without escaping. (string to string map, optional)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-ctas"`)
+- **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
 ### Output Parameters

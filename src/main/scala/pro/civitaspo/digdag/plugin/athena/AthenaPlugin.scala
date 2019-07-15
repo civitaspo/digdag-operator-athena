@@ -8,6 +8,7 @@ import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
 import pro.civitaspo.digdag.plugin.athena.add_partition.AthenaAddPartitionOperator
+import pro.civitaspo.digdag.plugin.athena.apas.AthenaApasOperator
 import pro.civitaspo.digdag.plugin.athena.ctas.AthenaCtasOperator
 import pro.civitaspo.digdag.plugin.athena.drop_partition.AthenaDropPartitionOperator
 import pro.civitaspo.digdag.plugin.athena.drop_table.AthenaDropTableOperator
@@ -30,6 +31,7 @@ object AthenaPlugin
             JArrays.asList(
                 operatorFactory("athena.add_partition", classOf[AthenaAddPartitionOperator]),
                 operatorFactory("athena.drop_partition", classOf[AthenaDropPartitionOperator]),
+                operatorFactory("athena.apas", classOf[AthenaApasOperator]),
                 operatorFactory("athena.ctas", classOf[AthenaCtasOperator]),
                 operatorFactory("athena.query", classOf[AthenaQueryOperator]),
                 operatorFactory("athena.preview", classOf[AthenaPreviewOperator]),
