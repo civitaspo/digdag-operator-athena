@@ -113,7 +113,9 @@ case class PartitionCatalog(glue: Glue)
                 ))
         }
         val location: String = locationOption.getOrElse {
-            val l = t.getStorageDescriptor.getLocation
+            val l = Option(t.getStorageDescriptor.getLocation).getOrElse {
+                throw new IllegalStateException(s"The location of '$database.$table' is null.")
+            }
             val sb = new StringBuilder()
             sb.append(l)
             if (!l.endsWith("/")) sb.append("/")
