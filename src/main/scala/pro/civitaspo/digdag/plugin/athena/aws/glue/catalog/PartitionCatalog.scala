@@ -114,7 +114,7 @@ case class PartitionCatalog(glue: Glue)
         }
         val location: String = locationOption.getOrElse {
             val l = t.getStorageDescriptor.getLocation
-            val sb = StringBuilder.newBuilder
+            val sb = new StringBuilder()
             sb.append(l)
             if (!l.endsWith("/")) sb.append("/")
             t.getPartitionKeys.asScala.zipWithIndex.foreach {
