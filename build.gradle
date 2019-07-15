@@ -32,6 +32,8 @@ dependencies {
     compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: awsSdkVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sts
     compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-glue
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-glue', version: awsSdkVersion
 }
 
 shadowJar {
