@@ -7,9 +7,11 @@ import java.util.{Arrays => JArrays, List => JList}
 import io.digdag.client.config.Config
 import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvider, Plugin, TemplateEngine}
 import javax.inject.Inject
+import pro.civitaspo.digdag.plugin.athena.add_partition.AthenaAddPartitionOperator
 import pro.civitaspo.digdag.plugin.athena.ctas.AthenaCtasOperator
 import pro.civitaspo.digdag.plugin.athena.preview.AthenaPreviewOperator
 import pro.civitaspo.digdag.plugin.athena.query.AthenaQueryOperator
+
 
 object AthenaPlugin
 {
@@ -24,6 +26,7 @@ object AthenaPlugin
         override def get(): JList[OperatorFactory] =
         {
             JArrays.asList(
+                operatorFactory("athena.add_partition", classOf[AthenaAddPartitionOperator]),
                 operatorFactory("athena.ctas", classOf[AthenaCtasOperator]),
                 operatorFactory("athena.query", classOf[AthenaQueryOperator]),
                 operatorFactory("athena.preview", classOf[AthenaPreviewOperator])
