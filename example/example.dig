@@ -19,9 +19,65 @@ _export:
   athena.preview>: ${athena.last_query.id}
 
 +stap4:
-  athena.ctas>:
-  select_query: template.sql
+  athena.ctas>: template.sql
   database: ${database}
   table: hoge
   output: ${output}
 
++step5:
+  echo>: ${athena}
+
++step6:
+  athena.drop_table>:
+  database: ${database}
+  table: hoge
+  with_location: true
+
++step7:
+  athena.ctas>: select 1 as a, 2 as b, 3 as c union all select 4 as a, 5 as b, 6 as c
+  database: ${database}
+  table: hoge
+  output: ${output}
+  partitioned_by: [b, c]
+
++step8:
+  athena.drop_partition>:
+  database: ${database}
+  table: hoge
+  partition_kv:
+    b: "5"
+    c: "6"
+
++step9:
+  athena.add_partition>:
+  database: ${database}
+  table: hoge
+  partition_kv:
+    b: "5"
+    c: "6"
+
++step10:
+  athena.add_partition>:
+  database: ${database}
+  table: hoge
+  partition_kv:
+    b: "5"
+    c: "6"
+
++step11:
+  athena.add_partition>:
+  database: ${database}
+  table: hoge
+  partition_kv:
+    b: "5"
+    c: "6"
+  location: ${output}/hoge/fuga/hogo/
+
++step12:
+  athena.drop_partition>:
+  database: ${database}
+  table: hoge
+  with_location: true
+  partition_kv:
+    b: "2"
+    c: "3"
