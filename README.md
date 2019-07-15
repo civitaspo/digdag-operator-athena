@@ -91,6 +91,15 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
+## Configuration for `athena.drop_partition>` operator
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
 ## Configuration for `athena.query>` operator
 
 ### Options
