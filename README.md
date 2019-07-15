@@ -87,7 +87,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
     - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
 - **partition_kv**: key-value pairs for partitioning (string to string map, required)
-- **mode**: The mode when storing data (string, default = `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
+- **save_mode**: The mode to save the partition. (string, default = `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
 - **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 

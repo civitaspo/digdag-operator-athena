@@ -140,4 +140,16 @@ case class PartitionCatalog(glue: Glue)
                     .withStoredAsSubDirectories(sd.getStoredAsSubDirectories)
                     .withLocation(location))
     }
+
+    def generateLocation(catalogIdOption: Option[String] = None,
+                         database: String,
+                         table: String,
+                         partitionKv: Map[String, String]): String =
+    {
+        val pi = newPartitionInput(catalogIdOption,
+                                   database,
+                                   table,
+                                   partitionKv)
+        pi.getStorageDescriptor.getLocation
+    }
 }

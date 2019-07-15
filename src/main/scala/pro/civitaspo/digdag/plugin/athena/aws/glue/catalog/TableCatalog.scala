@@ -20,6 +20,13 @@ case class TableCatalog(glue: Glue)
         glue.withGlue(_.getTable(req)).getTable
     }
 
+    def isPartitioned(catalogIdOption: Option[String],
+                      database: String,
+                      table: String): Boolean =
+    {
+        !describe(catalogIdOption, database, table).getPartitionKeys.isEmpty
+    }
+
     def exists(catalogIdOption: Option[String],
                database: String,
                table: String): Boolean =

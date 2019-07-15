@@ -83,4 +83,20 @@ case class S3(aws: Aws)
             uri
         }
     }
+
+    def hasObjects(location: String): Boolean =
+    {
+        hasObjects(uri = AmazonS3UriWrapper(location))
+    }
+
+    def hasObjects(uri: AmazonS3URI): Boolean =
+    {
+        hasObjects(bucket = uri.getBucket, prefix = uri.getKey)
+    }
+
+    def hasObjects(bucket: String,
+                   prefix: String): Boolean =
+    {
+        ls(bucket = bucket, prefix = prefix).nonEmpty
+    }
 }
