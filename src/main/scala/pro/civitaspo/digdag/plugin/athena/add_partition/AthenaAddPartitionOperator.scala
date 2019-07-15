@@ -86,21 +86,21 @@ class AthenaAddPartitionOperator(operatorName: String,
         else {
             saveMode match {
                 case SaveMode.Overwrite =>
-                    logger.info(s"Delete the partition${partitionKv.toString()} because the location $location does not exist.")
+                    logger.info(s"Delete the partition{${partitionKv.mkString(",")}} because the location $location does not exist.")
                     aws.glue.partition.delete(catalogId, database, table, partitionKv)
 
                 case SaveMode.SkipIfExists =>
-                    logger.warn(s"The partition${partitionKv.toString()} should be deleted because the location $location does not exist.")
+                    logger.warn(s"The partition{${partitionKv.mkString(",")}} should be deleted because the location $location does not exist.")
 
                 case SaveMode.ErrorIfExists =>
-                    throw new IllegalStateException(s"The partition${partitionKv.toString()} exists.")
+                    throw new IllegalStateException(s"The partition{${partitionKv.mkString(",")}} exists.")
             }
         }
     }
 
     protected def createPartition(): Unit =
     {
-        logger.info(s"Add a new partition${partitionKv.toString()} (location: $location) for '$database.$table'.")
+        logger.info(s"Add a new partition{${partitionKv.mkString(",")}} (location: $location) for '$database.$table'.")
         aws.glue.partition.add(catalogId, database, table, partitionKv, Option(location))
     }
 
@@ -108,14 +108,14 @@ class AthenaAddPartitionOperator(operatorName: String,
     {
         saveMode match {
             case SaveMode.Overwrite =>
-                logger.info(s"Add the partition${partitionKv.toString()} (location: $location) for '$database.$table'.")
+                logger.info(s"Add the partition{${partitionKv.mkString(",")}} (location: $location) for '$database.$table'.")
                 aws.glue.partition.update(catalogId, database, table, partitionKv, Option(location))
 
             case SaveMode.SkipIfExists =>
-                logger.info(s"Skip to update the partition because the partition${partitionKv.toString()} already exists.")
+                logger.info(s"Skip to update the partition because the partition{${partitionKv.mkString(",")}} already exists.")
 
             case SaveMode.ErrorIfExists =>
-                throw new IllegalStateException(s"The partition${partitionKv.toString()} already exists.")
+                throw new IllegalStateException(s"The partition{${partitionKv.mkString(",")}} already exists.")
         }
     }
 }

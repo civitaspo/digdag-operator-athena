@@ -109,7 +109,7 @@ case class PartitionCatalog(glue: Glue)
         val pVals: Seq[String] = t.getPartitionKeys.asScala.toSeq.map { c =>
             partitionKv.getOrElse(c.getName, throw new ConfigException(
                 s"Table[$database.$table] has a column${c.toString} as a partition," +
-                    s" but partitionKv ${partitionKv.toString()} does not have this."
+                    s" but partitionKv {${partitionKv.mkString(",")}} does not have this."
                 ))
         }
         val location: String = locationOption.getOrElse {

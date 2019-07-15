@@ -25,7 +25,7 @@ class AthenaDropPartitionOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         if (!aws.glue.partition.exists(catalogId, database, table, partitionKv)) {
-            if (!ignoreIfNotExist) throw new IllegalStateException(s"The partition${partitionKv.toString()} does not exist.")
+            if (!ignoreIfNotExist) throw new IllegalStateException(s"The partition{${partitionKv.mkString(",")}} does not exist.")
             return TaskResult.empty(cf)
         }
 
@@ -42,7 +42,7 @@ class AthenaDropPartitionOperator(operatorName: String,
             }
         }
 
-        logger.info(s"Delete the partition${partitionKv.toString()} in '$database.$table'")
+        logger.info(s"Delete the partition{${partitionKv.mkString(",")}} in '$database.$table'")
         aws.glue.partition.delete(catalogId, database, table, partitionKv)
         TaskResult.empty(cf)
     }
