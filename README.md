@@ -91,6 +91,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
+### Output Parameters
+
+Nothing
+
 ## Configuration for `athena.drop_partition>` operator
 
 - **database**: The name of the database. (string, required)
@@ -99,6 +103,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
 - **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
 
 ## Configuration for `athena.query>` operator
 
@@ -115,7 +123,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **athena.last_query.id**: The unique identifier for each query execution. (string)
 - **athena.last_query.database**: The name of the database. (string)
-- **workgroup**: The name of the workgroup in which the query is being started. (string)
+- **athena.last_query.workgroup**: The name of the workgroup in which the query is being started. (string)
 - **athena.last_query.query**: The SQL query statements which the query execution ran. (string)
 - **athena.last_query.output**: The location in Amazon S3 where your query results are stored. (string)
 - **athena.last_query.scan_bytes**: The number of bytes in the data that was queried. (long)
