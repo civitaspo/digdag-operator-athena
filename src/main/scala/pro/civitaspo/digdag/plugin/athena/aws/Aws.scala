@@ -10,6 +10,7 @@ import com.amazonaws.regions.{AwsEnvVarOverrideRegionProvider, AwsProfileRegionP
 import com.google.common.base.Optional
 import io.digdag.client.config.ConfigException
 import pro.civitaspo.digdag.plugin.athena.aws.athena.Athena
+import pro.civitaspo.digdag.plugin.athena.aws.glue.Glue
 import pro.civitaspo.digdag.plugin.athena.aws.s3.S3
 import pro.civitaspo.digdag.plugin.athena.aws.sts.Sts
 
@@ -27,6 +28,7 @@ case class Aws(conf: AwsConf)
     lazy val s3: S3 = S3(this)
     lazy val sts: Sts = Sts(this)
     lazy val athena: Athena = Athena(this)
+    lazy val glue: Glue = Glue(this)
 
     lazy val region: String = {
         conf.authMethod match {

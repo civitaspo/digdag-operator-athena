@@ -4,7 +4,7 @@ package pro.civitaspo.digdag.plugin.athena.aws.s3
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder, AmazonS3URI}
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 case class S3(aws: Aws)
@@ -46,7 +46,7 @@ case class S3(aws: Aws)
     def ls(bucket: String,
            prefix: String): Seq[AmazonS3URI] =
     {
-        withS3(_.listObjectsV2(bucket, prefix)).getObjectSummaries.asScala.map(_.getKey).map(k => AmazonS3UriWrapper(s"s3://$bucket/$k"))
+        withS3(_.listObjectsV2(bucket, prefix)).getObjectSummaries.asScala.toSeq.map(_.getKey).map(k => AmazonS3UriWrapper(s"s3://$bucket/$k"))
     }
 
     def rm(location: String): Unit =
@@ -82,5 +82,21 @@ case class S3(aws: Aws)
             rm(uri = uri)
             uri
         }
+    }
+
+    def hasObjects(location: String): Boolean =
+    {
+        hasObjects(uri = AmazonS3UriWrapper(location))
+    }
+
+    def hasObjects(uri: AmazonS3URI): Boolean =
+    {
+        hasObjects(bucket = uri.getBucket, prefix = uri.getKey)
+    }
+
+    def hasObjects(bucket: String,
+                   prefix: String): Boolean =
+    {
+        ls(bucket = bucket, prefix = prefix).nonEmpty
     }
 }

@@ -80,6 +80,34 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **region**: The AWS region to use for Athena service. (string, optional)
 - **endpoint**: The Amazon Athena endpoint address to use. (string, optional)
 
+## Configuration for `athena.add_partition>` operator
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
+    - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **save_mode**: The mode to save the partition. (string, default = `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
+- **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.drop_partition>` operator
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
 ## Configuration for `athena.query>` operator
 
 ### Options
@@ -95,7 +123,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **athena.last_query.id**: The unique identifier for each query execution. (string)
 - **athena.last_query.database**: The name of the database. (string)
-- **workgroup**: The name of the workgroup in which the query is being started. (string)
+- **athena.last_query.workgroup**: The name of the workgroup in which the query is being started. (string)
 - **athena.last_query.query**: The SQL query statements which the query execution ran. (string)
 - **athena.last_query.output**: The location in Amazon S3 where your query results are stored. (string)
 - **athena.last_query.scan_bytes**: The number of bytes in the data that was queried. (long)
@@ -155,6 +183,18 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"overwrite"`: Drop the distination table and remove objects before executing CTAS. This operation is not atomic.
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-ctas"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.drop_table>` operator
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
 ### Output Parameters
 
