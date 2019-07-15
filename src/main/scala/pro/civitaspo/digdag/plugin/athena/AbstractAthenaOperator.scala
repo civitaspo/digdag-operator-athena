@@ -1,7 +1,6 @@
 package pro.civitaspo.digdag.plugin.athena
 
 
-import com.amazonaws.services.athena.AmazonAthena
 import io.digdag.client.config.{Config, ConfigFactory}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
 import io.digdag.util.{BaseOperator, DurationParam}
@@ -16,6 +15,10 @@ abstract class AbstractAthenaOperator(operatorName: String,
 {
 
     protected val logger: Logger = LoggerFactory.getLogger(operatorName)
+    if (!logger.isDebugEnabled) {
+        // NOTE: suppress aws-java-sdk logs because of a bit noisy logging.
+        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
+    }
     protected val cf: ConfigFactory = request.getConfig.getFactory
     protected val params: Config = {
         val elems: Seq[String] = operatorName.split("\\.")
