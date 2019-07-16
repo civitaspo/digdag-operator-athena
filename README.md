@@ -125,6 +125,9 @@ Nothing
 - **partition_kv**: key-value pairs for partitioning (string to string map, required)
 - **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
     - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
+- **format**: The data format for the query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: auto detection)
+- **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: auto detection)
+- **field_delimiter**: The field delimiter for files in CSV, TSV, and text files. This option is applied only when **format** is specific to text-based data storage formats. (string, auto detection)
 - **save_mode**: Specify the expected behavior. Available values are `"skip_if_exists"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
     - `"skip_if_exists"`: Skip processing if the partition or the location exists.
     - `"error_if_exists"`: Raise error if the partition or the location exists.
