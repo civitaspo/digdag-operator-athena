@@ -1,3 +1,8 @@
+0.2.1 (2019-07-16)
+==================
+
+* [Enhancement] Add `format`, `compression` and `field_delimiter` options to `athena.apas>` operator. If not set, these are detected automatically.
+
 0.2.0 (2019-07-16)
 ==================
 
