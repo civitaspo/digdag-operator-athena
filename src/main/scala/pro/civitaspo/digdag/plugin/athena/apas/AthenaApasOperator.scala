@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.apas
 
 
-import com.amazonaws.services.glue.model.{SerDeInfo, Table}
+import com.amazonaws.services.glue.model.Table
 import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
@@ -9,7 +9,8 @@ import io.digdag.util.DurationParam
 import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 
 import scala.jdk.CollectionConverters._
-import scala.util.Random
+import scala.util.{Random, Try}
+import scala.util.chaining._
 
 
 class AthenaApasOperator(operatorName: String,
@@ -46,9 +47,9 @@ class AthenaApasOperator(operatorName: String,
     protected val table: String = params.get("table", classOf[String])
     protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
     protected val partitionKv: Map[String, String] = params.getMap("partition_kv", classOf[String], classOf[String]).asScala.toMap
-    protected val _format: Option[String] = Option(params.getOptional("format", classOf[String]).orNull())
-    protected val _compression: Option[String] = Option(params.getOptional("compression", classOf[String]).orNull())
-    protected val _fieldDelimiter: Option[String] = Option(params.getOptional("field_delimiter", classOf[String]).orNull())
+    protected val format: Option[String] = Option(params.getOptional("format", classOf[String]).orNull())
+    protected val compression: Option[String] = Option(params.getOptional("compression", classOf[String]).orNull())
+    protected val fieldDelimiter: Option[String] = Option(params.getOptional("field_delimiter", classOf[String]).orNull())
     protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
     protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala.toSeq
     protected val bucketCount: Optional[Int] = params.getOptional("bucket_count", classOf[Int])
@@ -109,25 +110,37 @@ class AthenaApasOperator(operatorName: String,
         if (!prepareCondition()) return TaskResult.empty(cf)
 
         val t: Table = aws.glue.table.describe(catalogId, database, table)
-        val format: String = _format.getOrElse(detectFormat(t.getStorageDescriptor.getSerdeInfo.getSerializationLibrary))
-        val compression: Option[String] = _compression.orElse(detectCompression(t.getParameters.asScala.toMap))
-        val fieldDelimiter: Option[String] = _fieldDelimiter.orElse(detectFieldDelimiter(t.getStorageDescriptor.getSerdeInfo))
+        val fmt: String = format.getOrElse {
+            detectFormat(Try(t.getStorageDescriptor.getSerdeInfo.getSerializationLibrary).getOrElse("")).tap { s =>
+                logger.info(s"Detect $s as format.")
+            }
+        }
+        val c: Option[String] = compression.orElse {
+            detectCompression(Try(t.getParameters.asScala.toMap).getOrElse(Map())).tap { opt =>
+                opt.foreach(s => logger.info(s"Detect $s as compression."))
+            }
+        }
+        val fd: Option[String] = fieldDelimiter.orElse {
+            detectFieldDelimiter(Try(t.getStorageDescriptor.getSerdeInfo.getParameters.asScala.toMap).getOrElse(Map())).tap { opt =>
+                opt.foreach(s => logger.info(s"Detect $s as field_delimiter."))
+            }
+        }
 
         val dummyTable: String = genDummyTableName()
 
         val subTask: Config = cf.create()
         subTask.set("+create-empty-dummy", buildCtasSubTaskConfig(tableName = dummyTable,
-                                                                  format = format,
-                                                                  compression = compression,
-                                                                  fieldDelimiter = fieldDelimiter,
+                                                                  format = fmt,
+                                                                  compression = c,
+                                                                  fieldDelimiter = fd,
                                                                   tableMode = "empty"))
         subTask.set("+diff-schema", buildDiffSchemaInternalSubTaskConfig(comparisonTableName = dummyTable))
         subTask.set("+drop-dummy", buildDropTableSubTaskConfig(tableName = dummyTable))
         subTask.set("+store-data-by-ctas", buildCtasSubTaskConfig(tableName = dummyTable,
                                                                   outputLocation = Option(location),
-                                                                  format = format,
-                                                                  compression = compression,
-                                                                  fieldDelimiter = fieldDelimiter,
+                                                                  format = fmt,
+                                                                  compression = c,
+                                                                  fieldDelimiter = fd,
                                                                   tableMode = "data_only"))
         subTask.set("+add-partition", buildAddPartitionSubTaskConfig())
 
@@ -162,9 +175,10 @@ class AthenaApasOperator(operatorName: String,
         None
     }
 
-    protected def detectFieldDelimiter(serDeInfo: SerDeInfo): Option[String] =
+    protected def detectFieldDelimiter(serDeProperties: Map[String, String]): Option[String] =
     {
-        Option(serDeInfo.getParameters.getOrDefault("field.delim", null))
+        if (serDeProperties.contains("field.delim")) return Option(serDeProperties("field.delim"))
+        None
     }
 
     protected def genDummyTableName(): String =
