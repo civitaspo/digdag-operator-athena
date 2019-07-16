@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.1.5
+      - pro.civitaspo:digdag-operator-athena:0.2.0
   athena:
     auth_method: profile
 
@@ -80,6 +80,67 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **region**: The AWS region to use for Athena service. (string, optional)
 - **endpoint**: The Amazon Athena endpoint address to use. (string, optional)
 
+## Configuration for `athena.add_partition>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
+    - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **save_mode**: The mode to save the partition. (string, default = `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
+- **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.drop_partition>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.apas>` operator
+
+`apas` means *Add a partition as select* that creates a partition the query result is stored.
+
+### Options
+
+- **athena.apas>**: The select SQL statements or file location (in local or Amazon S3) to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
+- **database**: The name of the database that has the partitioned table. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
+- **partition_kv**: key-value pairs for partitioning (string to string map, required)
+- **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
+    - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
+- **save_mode**: Specify the expected behavior. Available values are `"skip_if_exists"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
+    - `"skip_if_exists"`: Skip processing if the partition or the location exists.
+    - `"error_if_exists"`: Raise error if the partition or the location exists.
+    - `"overwrite"`: Always recreate the partition and the location if exists. This operation is not atomic.
+- **bucketed_by**: An array list of buckets to bucket data. If omitted, Athena does not bucket your data in this query. (array of string, optional)
+- **bucket_count**: The number of buckets for bucketing your data. If omitted, Athena does not bucket your data. (integer, optional)
+- **additional_properties**: Additional properties for CTAS that is used `athena.apas>` internally. These are used for CTAS WITH clause without escaping. (string to string map, optional)
+- **ignore_schema_diff**: Ignore if the schema of the query result is different from tha table. (boolean, default: `false`)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-apas"`)
+- **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
 ## Configuration for `athena.query>` operator
 
 ### Options
@@ -87,7 +148,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.query>**: The SQL query statements or file location (in local or Amazon S3) to be executed. You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${random string}`. (string, default: `"digdag-athena"`)
 - **database**: The name of the database. (string, optional)
-- **output**: The location in Amazon S3 where your query results are stored, such as `"s3://path/to/query/"`. For more information, see [Queries and Query Result Files](https://docs.aws.amazon.com/athena/latest/ug/querying.html). (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>"`)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
 
@@ -95,6 +156,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 - **athena.last_query.id**: The unique identifier for each query execution. (string)
 - **athena.last_query.database**: The name of the database. (string)
+- **athena.last_query.workgroup**: The name of the workgroup in which the query is being started. (string)
 - **athena.last_query.query**: The SQL query statements which the query execution ran. (string)
 - **athena.last_query.output**: The location in Amazon S3 where your query results are stored. (string)
 - **athena.last_query.scan_bytes**: The number of bytes in the data that was queried. (long)
@@ -131,9 +193,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 ### Options
 
-- **select_query**: The select SQL statements or file location (in local or Amazon S3) to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
+- **athena.ctas>**: The select SQL statements or file location (in local or Amazon S3) to be executed for a new table by [`Create Table As Select`]((https://aws.amazon.com/jp/about-aws/whats-new/2018/10/athena_ctas_support/)). You can use digdag's template engine like `${...}` in the SQL query. (string, required)
 - **database**: The database name for query execution context. (string, optional)
 - **table**: The table name for the new table (string, default: `digdag_athena_ctas_${session_uuid.replaceAll("-", "")}_${random}`)
+- **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **output**: Output location for data created by CTAS (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>/Unsaved/${YEAR}/${MONTH}/${DAY}/${athena_query_id}/"`)
 - **format**: The data format for the CTAS query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: `"parquet"`)
 - **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: `"snappy"`)
@@ -144,7 +207,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **additional_properties**: Additional properties for CTAS. These are used for CTAS WITH clause without escaping. (string to string map, optional)
 - **table_mode**: Specify the expected behavior of CTAS results. Available values are `"default"`, `"empty"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
   - `"default"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
-  - `"empty_table"`: Create a new empty table with the same schema as the select query results.
+  - `"empty"`: Create a new empty table with the same schema as the select query results.
   - `"data_only"`: Create a new table with data by CTAS, but drop this after CTAS execution. The table created by CTAS is an external table, so the data is left even if the table is dropped.
 - **save_mode**: Specify the expected behavior of CTAS. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
   - `"none"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
@@ -153,6 +216,18 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"overwrite"`: Drop the distination table and remove objects before executing CTAS. This operation is not atomic.
 - **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-ctas"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.drop_table>` operator
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
 ### Output Parameters
 
