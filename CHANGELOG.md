@@ -1,7 +1,23 @@
-0.2.0 (yyyy-mm-dd)
+0.2.0 (2019-07-16)
 ==================
 
-* TBD
+* [New Feature] Add `athena.apas>` operator.
+* [Enhancement] Use scala 2.13.0
+* [New Feature] `athena.add_partition>` operator
+* [New Feature] `athena.drop_partition>` operator
+* [New Feature] `athena.drop_table>` operator
+* [Enhancement] Suppress aws-java-sdk log
+* [Note] Use aws-java-sdk-glue for catalog only operations.
+* [Breaking Change - `athena.query>`] `preview` option is `false` by default.
+* [Enhancement - `athena.ctas>`] Remove `;` from the query.
+* [Enhancement] Create wrappers for aws-java-sdk for the readability and the separation of responsibilities.
+    * The change of STS has a possibility to break the backward compatibility of `assume role` behavior.
+* [Enhancement] Introduce region variable for `Aws` to resolve region according to `auth_method` option.
+* [New Feature] Add `workgroup` option.
+* [Breaking Change - `athena.query`] Remove the `output` option as the deprecation is notified from before.
+* [Deprecated - `athena.ctas>`] Make `select_query` deprecated.
+* [Note] Introduce `pro.civitaspo.digdag.plugin.athena.aws` package to divide dependencies about aws.
+* [Note] Use the Intellij formatter instead of spotless, so remove spotless from CI.
 
 
 0.1.5 (2018-12-11)
