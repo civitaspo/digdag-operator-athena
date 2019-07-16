@@ -81,3 +81,12 @@ _export:
   partition_kv:
     b: "2"
     c: "3"
+
++step13:
+  athena.apas>: select 5 as a
+  database: ${database}
+  table: hoge
+  partition_kv:
+    b: "9"
+    c: "10"
+  save_mode: overwrite

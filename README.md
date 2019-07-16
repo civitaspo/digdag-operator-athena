@@ -132,7 +132,8 @@ Nothing
 - **bucketed_by**: An array list of buckets to bucket data. If omitted, Athena does not bucket your data in this query. (array of string, optional)
 - **bucket_count**: The number of buckets for bucketing your data. If omitted, Athena does not bucket your data. (integer, optional)
 - **additional_properties**: Additional properties for CTAS that is used `athena.apas>` internally. These are used for CTAS WITH clause without escaping. (string to string map, optional)
-- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-ctas"`)
+- **ignore_schema_diff**: Ignore if the schema of the query result is different from tha table. (boolean, default: `false`)
+- **token_prefix**: Prefix for `ClientRequestToken` that a unique case-sensitive string used to ensure the request to create the query is idempotent (executes only once). On this plugin, the token is composed like `${token_prefix}-${session_uuid}-${hash value of query}-${radom string}`. (string, default: `"digdag-athena-apas"`)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
@@ -206,7 +207,7 @@ Nothing
 - **additional_properties**: Additional properties for CTAS. These are used for CTAS WITH clause without escaping. (string to string map, optional)
 - **table_mode**: Specify the expected behavior of CTAS results. Available values are `"default"`, `"empty"`, `"data_only"`. See the below explanation of the behaviour. (string, default: `"default"`)
   - `"default"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
-  - `"empty_table"`: Create a new empty table with the same schema as the select query results.
+  - `"empty"`: Create a new empty table with the same schema as the select query results.
   - `"data_only"`: Create a new table with data by CTAS, but drop this after CTAS execution. The table created by CTAS is an external table, so the data is left even if the table is dropped.
 - **save_mode**: Specify the expected behavior of CTAS. Available values are `"none"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
   - `"none"`: Do not do any care. This option require the least IAM privileges for digdag, but the behaviour depends on Athena.
