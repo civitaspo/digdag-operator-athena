@@ -1,3 +1,11 @@
+0.2.2 (2019-07-19)
+==================
+
+* [Enhancement] Use scala-logging for logging instead of using slf4j directly
+* [Enhancement] Use workgroup default output location for athena query result output location.
+* [Change - `athena.ctas>`] Introduce `location` option and `output` option become deprecated.
+
+
 0.2.1 (2019-07-16)
 ==================
 

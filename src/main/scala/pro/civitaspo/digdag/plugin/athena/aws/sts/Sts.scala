@@ -6,7 +6,7 @@ import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurit
 import com.amazonaws.services.securitytoken.model.{AssumeRoleRequest, GetCallerIdentityRequest, PolicyDescriptorType}
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 case class Sts(aws: Aws)

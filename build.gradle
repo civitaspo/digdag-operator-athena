@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'pro.civitaspo'
-version = '0.2.1'
+version = '0.2.2'
 
 def digdagVersion = '0.9.37'
 def awsSdkVersion = "1.11.587"
@@ -34,6 +34,9 @@ dependencies {
     compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-glue
     compile group: 'com.amazonaws', name: 'aws-java-sdk-glue', version: awsSdkVersion
+    // https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging
+    compile group: 'com.typesafe.scala-logging', name: "scala-logging_$depScalaVersion", version: '3.9.2'
+
 }
 
 shadowJar {

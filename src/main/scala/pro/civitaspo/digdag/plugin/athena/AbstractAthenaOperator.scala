@@ -1,21 +1,21 @@
 package pro.civitaspo.digdag.plugin.athena
 
 
+import com.typesafe.scalalogging.LazyLogging
 import io.digdag.client.config.{Config, ConfigFactory}
 import io.digdag.spi.{OperatorContext, SecretProvider, TemplateEngine}
 import io.digdag.util.{BaseOperator, DurationParam}
-import org.slf4j.{Logger, LoggerFactory}
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsConf}
+
 
 abstract class AbstractAthenaOperator(operatorName: String,
                                       context: OperatorContext,
                                       systemConfig: Config,
                                       templateEngine: TemplateEngine)
     extends BaseOperator(context)
+        with LazyLogging
 {
-
-    protected val logger: Logger = LoggerFactory.getLogger(operatorName)
-    if (!logger.isDebugEnabled) {
+    if (!logger.underlying.isDebugEnabled) {
         // NOTE: suppress aws-java-sdk logs because of a bit noisy logging.
         System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog")
     }
