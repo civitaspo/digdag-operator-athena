@@ -12,6 +12,7 @@ import pro.civitaspo.digdag.plugin.athena.AbstractAthenaOperator
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Random, Success, Try}
 
+
 class AthenaCtasOperator(operatorName: String,
                          context: OperatorContext,
                          systemConfig: Config,
@@ -85,7 +86,20 @@ class AthenaCtasOperator(operatorName: String,
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     protected val table: String = params.get("table", classOf[String], defaultTableName)
     protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
+    @deprecated(message = "Use location option instead", since = "0.2.2")
     protected val output: Optional[String] = params.getOptional("output", classOf[String])
+    protected val location: Optional[String] = {
+        val l = params.getOptional("location", classOf[String])
+        if (output.isPresent && l.isPresent) {
+            logger.warn(s"Use the value of location option: ${l.get()} although the value of output option (${output.get()}) is specified.")
+            l
+        }
+        else if (output.isPresent) {
+            logger.warn("output option is deprecated. Please use location option instead.")
+            output
+        }
+        else l
+    }
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
     protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
@@ -135,15 +149,15 @@ class AthenaCtasOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         saveMode match {
-            case SaveMode.ErrorIfExists if output.isPresent && hasObjects(output.get) =>
-                throw new IllegalStateException(s"${output.get} already exists")
-            case SaveMode.Ignore if output.isPresent && hasObjects(output.get)        =>
-                logger.info(s"${output.get} already exists, so ignore this session.")
+            case SaveMode.ErrorIfExists if location.isPresent && hasObjects(location.get) =>
+                throw new IllegalStateException(s"${location.get} already exists")
+            case SaveMode.Ignore if location.isPresent && hasObjects(location.get)        =>
+                logger.info(s"${location.get} already exists, so ignore this session.")
                 return TaskResult.empty(request)
-            case SaveMode.Overwrite if output.isPresent                               =>
-                logger.info(s"Overwrite ${output.get}")
-                rmObjects(output.get)
-            case _                                                                    => // do nothing
+            case SaveMode.Overwrite if location.isPresent                                 =>
+                logger.info(s"Overwrite ${location.get}")
+                rmObjects(location.get)
+            case _                                                                        => // do nothing
         }
 
         val subTask: Config = cf.create()
@@ -169,7 +183,7 @@ class AthenaCtasOperator(operatorName: String,
     protected def generateCtasQuery(): String =
     {
         val propsBuilder = Map.newBuilder[String, String]
-        if (output.isPresent) propsBuilder += ("external_location" -> s"'${output.get}'")
+        if (location.isPresent) propsBuilder += ("external_location" -> s"'${location.get}'")
         propsBuilder += ("format" -> s"'$format'")
         format match {
             case "parquet" => propsBuilder += ("parquet_compression" -> s"'$compression'")

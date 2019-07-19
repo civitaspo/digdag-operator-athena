@@ -22,7 +22,7 @@ _export:
   athena.ctas>: template.sql
   database: ${database}
   table: hoge
-  output: ${output}
+  location: ${output}
 
 +step5:
   echo>: ${athena}
@@ -37,7 +37,7 @@ _export:
   athena.ctas>: select 1 as a, 2 as b, 3 as c union all select 4 as a, 5 as b, 6 as c
   database: ${database}
   table: hoge
-  output: ${output}
+  location: ${output}
   partitioned_by: [b, c]
 
 +step8:
