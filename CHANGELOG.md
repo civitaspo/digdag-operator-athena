@@ -1,3 +1,8 @@
+0.2.3 (2019-07-19)
+==================
+* [New Feature] Add `athena.drop_table_multi>` operator
+* [Enhancement] Expose the real error message and state when the query execution is failed.
+
 0.2.2 (2019-07-19)
 ==================
 
