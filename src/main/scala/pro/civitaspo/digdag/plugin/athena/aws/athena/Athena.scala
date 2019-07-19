@@ -97,10 +97,20 @@ case class Athena(aws: Aws)
                                                       outputLocation = outputLocation,
                                                       requestToken = requestToken)
 
-        waitQueryExecution(executionId = executionId,
-                           successStates = successStates,
-                           failureStates = failureStates,
-                           timeout = timeout)
+        val t = Try {
+            waitQueryExecution(executionId = executionId,
+                               successStates = successStates,
+                               failureStates = failureStates,
+                               timeout = timeout)
+        }
+        t match {
+            case Success(_)         => logger.info(s"Success to execute the query: $executionId")
+            case Failure(exception) =>
+                logger.error(exception.getMessage, exception)
+                val qe = getQueryExecution(executionId = executionId)
+                throw new IllegalStateException(s"Failed the query execution: ${qe.withQuery(null).toString}", exception)
+        }
+
 
         getQueryExecution(executionId = executionId)
     }
