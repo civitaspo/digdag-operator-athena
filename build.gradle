@@ -34,6 +34,9 @@ dependencies {
     compile group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: awsSdkVersion
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-glue
     compile group: 'com.amazonaws', name: 'aws-java-sdk-glue', version: awsSdkVersion
+    // https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging
+    compile group: 'com.typesafe.scala-logging', name: "scala-logging_$depScalaVersion", version: '3.9.2'
+
 }
 
 shadowJar {

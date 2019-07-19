@@ -4,7 +4,6 @@ package pro.civitaspo.digdag.plugin.athena.aws.athena
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
 import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryResultsRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultSet, StartQueryExecutionRequest}
 import io.digdag.util.DurationParam
-import org.slf4j.Logger
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
 
 
@@ -50,14 +49,12 @@ case class Athena(aws: Aws)
     def waitQueryExecution(executionId: String,
                            successStates: Seq[QueryExecutionState],
                            failureStates: Seq[QueryExecutionState],
-                           timeout: DurationParam,
-                           loggerOption: Option[Logger] = None): Unit =
+                           timeout: DurationParam): Unit =
     {
         val waiter = AthenaQueryWaiter(athena = this,
                                        successStats = successStates,
                                        failureStats = failureStates,
-                                       timeout = timeout,
-                                       loggerOption = loggerOption)
+                                       timeout = timeout)
         waiter.wait(executionId)
     }
 
@@ -68,8 +65,7 @@ case class Athena(aws: Aws)
                  requestToken: Option[String] = None,
                  successStates: Seq[QueryExecutionState],
                  failureStates: Seq[QueryExecutionState],
-                 timeout: DurationParam,
-                 loggerOption: Option[Logger] = None): QueryExecution =
+                 timeout: DurationParam): QueryExecution =
     {
         val executionId: String = startQueryExecution(query = query,
                                                       database = database,
@@ -80,8 +76,7 @@ case class Athena(aws: Aws)
         waitQueryExecution(executionId = executionId,
                            successStates = successStates,
                            failureStates = failureStates,
-                           timeout = timeout,
-                           loggerOption = loggerOption)
+                           timeout = timeout)
 
         getQueryExecution(executionId = executionId)
     }
