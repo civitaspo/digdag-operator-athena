@@ -228,9 +228,21 @@ Nothing
 ## Configuration for `athena.drop_table>` operator
 
 - **database**: The name of the database. (string, required)
-- **table**: The name of the partitioned table. (string, required)
+- **table**: The name of the table. (string, required)
 - **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
 - **ignore_if_not_exist**: Ignore if the partition does not exist. (boolean, default: `true`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+Nothing
+
+## Configuration for `athena.drop_table_multi>` operator
+
+- **database**: The name of the database. (string, required)
+- **regexp**: The regular expression for table names to be dropped. (string, required)
+- **with_location**: Drop the partition with removing objects on S3 (boolean, default: `false`)
+- **limit**: Max number of tables that can be dropped. (integer, optional)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
 ### Output Parameters
