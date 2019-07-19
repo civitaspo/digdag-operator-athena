@@ -6,18 +6,17 @@ import java.util.concurrent.{Executors, ExecutorService}
 import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryExecutionResult, QueryExecutionState}
 import com.amazonaws.waiters.{PollingStrategy, PollingStrategyContext, SdkFunction, Waiter, WaiterAcceptor, WaiterBuilder, WaiterParameters, WaiterState}
 import com.amazonaws.waiters.PollingStrategy.{DelayStrategy, RetryStrategy}
+import com.typesafe.scalalogging.LazyLogging
 import io.digdag.util.DurationParam
-import org.slf4j.{Logger, LoggerFactory}
+
 
 case class AthenaQueryWaiter(athena: Athena,
                              successStats: Seq[QueryExecutionState],
                              failureStats: Seq[QueryExecutionState],
                              executorService: ExecutorService = Executors.newFixedThreadPool(50),
-                             timeout: DurationParam,
-                             loggerOption: Option[Logger] = None)
+                             timeout: DurationParam)
+    extends LazyLogging
 {
-    val logger: Logger = loggerOption.getOrElse(LoggerFactory.getLogger(classOf[AthenaQueryWaiter]))
-
     def wait(executionId: String): Unit =
     {
         newWaiter().run(newWaiterParameters(executionId = executionId))

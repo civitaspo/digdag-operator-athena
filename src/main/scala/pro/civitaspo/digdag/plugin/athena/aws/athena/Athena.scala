@@ -2,10 +2,12 @@ package pro.civitaspo.digdag.plugin.athena.aws.athena
 
 
 import com.amazonaws.services.athena.{AmazonAthena, AmazonAthenaClientBuilder}
-import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryResultsRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultSet, StartQueryExecutionRequest}
+import com.amazonaws.services.athena.model.{GetQueryExecutionRequest, GetQueryResultsRequest, GetWorkGroupRequest, QueryExecution, QueryExecutionContext, QueryExecutionState, ResultConfiguration, ResultSet, StartQueryExecutionRequest}
 import io.digdag.util.DurationParam
-import org.slf4j.Logger
 import pro.civitaspo.digdag.plugin.athena.aws.{Aws, AwsService}
+
+import scala.util.{Failure, Success, Try}
+import scala.util.chaining._
 
 
 case class Athena(aws: Aws)
@@ -35,11 +37,32 @@ case class Athena(aws: Aws)
         req.setQueryString(query)
         database.foreach(db => req.setQueryExecutionContext(new QueryExecutionContext().withDatabase(db)))
         req.setWorkGroup(workGroup.getOrElse(DEFAULT_WORKGROUP))
-        // TODO: overwrite by workgroup configurations if workgroup is not "primary".
-        req.setResultConfiguration(new ResultConfiguration().withOutputLocation(outputLocation.getOrElse(DEFAULT_OUTPUT_LOCATION)))
+        req.setResultConfiguration(new ResultConfiguration()
+                                       .withOutputLocation(resolveWorkGroupOutputLocation(workGroup.getOrElse(DEFAULT_WORKGROUP))))
         requestToken.foreach(req.setClientRequestToken)
 
         withAthena(_.startQueryExecution(req)).getQueryExecutionId
+    }
+
+    def resolveWorkGroupOutputLocation(workGroup: String): String =
+    {
+        workGroup match {
+            case DEFAULT_WORKGROUP => DEFAULT_OUTPUT_LOCATION
+            case wg                =>
+                val t = Try {
+                    withAthena(_.getWorkGroup(new GetWorkGroupRequest().withWorkGroup(wg)))
+                        .getWorkGroup
+                        .getConfiguration
+                        .getResultConfiguration
+                        .getOutputLocation
+                }
+                t match {
+                    case Success(outputLocation) => outputLocation
+                    case Failure(ex)             => DEFAULT_OUTPUT_LOCATION.tap { default =>
+                        logger.warn(s"Use $default as athena output location because the workgroup output location cannot be resolved due to '${ex.getMessage}'.", ex)
+                    }
+                }
+        }
     }
 
     def getQueryExecution(executionId: String): QueryExecution =
@@ -50,14 +73,12 @@ case class Athena(aws: Aws)
     def waitQueryExecution(executionId: String,
                            successStates: Seq[QueryExecutionState],
                            failureStates: Seq[QueryExecutionState],
-                           timeout: DurationParam,
-                           loggerOption: Option[Logger] = None): Unit =
+                           timeout: DurationParam): Unit =
     {
         val waiter = AthenaQueryWaiter(athena = this,
                                        successStats = successStates,
                                        failureStats = failureStates,
-                                       timeout = timeout,
-                                       loggerOption = loggerOption)
+                                       timeout = timeout)
         waiter.wait(executionId)
     }
 
@@ -68,8 +89,7 @@ case class Athena(aws: Aws)
                  requestToken: Option[String] = None,
                  successStates: Seq[QueryExecutionState],
                  failureStates: Seq[QueryExecutionState],
-                 timeout: DurationParam,
-                 loggerOption: Option[Logger] = None): QueryExecution =
+                 timeout: DurationParam): QueryExecution =
     {
         val executionId: String = startQueryExecution(query = query,
                                                       database = database,
@@ -80,8 +100,7 @@ case class Athena(aws: Aws)
         waitQueryExecution(executionId = executionId,
                            successStates = successStates,
                            failureStates = failureStates,
-                           timeout = timeout,
-                           loggerOption = loggerOption)
+                           timeout = timeout)
 
         getQueryExecution(executionId = executionId)
     }
