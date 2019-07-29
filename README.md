@@ -112,6 +112,22 @@ Nothing
 
 Nothing
 
+## Configuration for `athena.partition_exists?>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **partition_kv**: key-value pairs for the partition (string to string map, required)
+- **with_location**: Check the partition existence with the location (boolean, default: `false`)
+- **error_if_not_exist**: Raise the exception if the partition does not exist. (boolean, default: `false`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+- **athena.last_partition_exists.partition_exists**: `true` if the partition exists, or `false` (boolean)
+- **athena.last_partition_exists.location_exists**: `true` if the partition location exists, or `false`. `null` if not set **with_location** option is `true`. (boolean)
+
 ## Configuration for `athena.apas>` operator
 
 `apas` means *Add a partition as select* that creates a partition the query result is stored.
