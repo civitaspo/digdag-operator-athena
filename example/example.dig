@@ -4,7 +4,7 @@ _export:
       - file://${repos}
       # - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.2.3
+      - pro.civitaspo:digdag-operator-athena:0.2.4
   athena:
     auth_method: profile
     value: 5
@@ -92,6 +92,27 @@ _export:
   save_mode: overwrite
 
 +step14:
+  +step1:
+    athena.partition_exists?>:
+    database: ${database}
+    table: hoge
+    with_location: true
+    partition_kv:
+      b: "9"
+      c: "10"
+  +step2:
+    echo>: ${athena.last_partition_exists}
+  +step3:
+    athena.partition_exists?>:
+    database: ${database}
+    table: hoge
+    partition_kv:
+      b: "9"
+      c: "10"
+  +step4:
+    echo>: ${athena.last_partition_exists}
+
++step15:
   loop>: 10
   _parallel: true
   _do:
@@ -101,15 +122,66 @@ _export:
     location: ${output}/hoge_${i}/
     save_mode: overwrite
 
-+step15:
++step16:
+  +step1:
+    athena.table_exists?>:
+    database: ${database}
+    table: hoge_1
+    with_location: true
+  +step2:
+    echo>: ${athena.last_table_exists}
+  +step3:
+    athena.table_exists?>:
+    database: ${database}
+    table: hoge
+  +step4:
+    echo>: ${athena.last_table_exists}
+
++step17:
   athena.drop_table_multi>:
   database: ${database}
   regexp: 'hoge_\d+'
   with_location: true
   limit: 3
 
-+step16:
++step18:
   athena.drop_table_multi>:
   database: ${database}
   regexp: 'hoge_\d+'
   with_location: true
+
++step19:
+  +step1:
+    athena.table_exists?>:
+    database: ${database}
+    table: hoge_1
+    with_location: true
+  +step2:
+    echo>: ${athena.last_table_exists}
+  +step3:
+    athena.table_exists?>:
+    database: ${database}
+    table: hoge
+  +step4:
+    echo>: ${athena.last_table_exists}
+
++step20:
+  +step1:
+    athena.partition_exists?>:
+    database: ${database}
+    table: hoge_1
+    with_location: true
+    partition_kv:
+      b: "9"
+      c: "10"
+  +step2:
+    echo>: ${athena.last_partition_exists}
+  +step3:
+    athena.partition_exists?>:
+    database: ${database}
+    table: hoge_1
+    partition_kv:
+      b: "9"
+      c: "10"
+  +step4:
+    echo>: ${athena.last_partition_exists}

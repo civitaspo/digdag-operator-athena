@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.2.3
+      - pro.civitaspo:digdag-operator-athena:0.2.4
   athena:
     auth_method: profile
 
@@ -31,6 +31,8 @@ _export:
   table: hoge
   output: s3://mybucket/prefix/
 ```
+
+See [examples](./example/example.dig) for more cases.
 
 # Configuration
 
@@ -111,6 +113,22 @@ Nothing
 ### Output Parameters
 
 Nothing
+
+## Configuration for `athena.partition_exists?>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the partitioned table. (string, required)
+- **partition_kv**: key-value pairs for the partition (string to string map, required)
+- **with_location**: Check the partition existence with the location (boolean, default: `false`)
+- **error_if_not_exist**: Raise the exception if the partition or location does not exist. (boolean, default: `false`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+- **athena.last_partition_exists.partition_exists**: `true` if the partition exists, or `false` (boolean)
+- **athena.last_partition_exists.location_exists**: `true` if the partition location exists, or `false`. `null` if not set **with_location** option is `true`. (boolean)
 
 ## Configuration for `athena.apas>` operator
 
@@ -248,6 +266,22 @@ Nothing
 ### Output Parameters
 
 Nothing
+
+## Configuration for `athena.table_exists?>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the table. (string, required)
+- **with_location**: Check the partition existence with the location (boolean, default: `false`)
+- **error_if_not_exist**: Raise the exception if the table or location does not exist. (boolean, default: `false`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+- **athena.last_partition_exists.table_exists**: `true` if the table exists, or `false` (boolean)
+- **athena.last_partition_exists.location_exists**: `true` if the table location exists, or `false`. `null` if not set **with_location** option is `true`. (boolean)
+
 
 # Development
 
