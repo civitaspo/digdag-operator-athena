@@ -120,7 +120,7 @@ Nothing
 - **table**: The name of the partitioned table. (string, required)
 - **partition_kv**: key-value pairs for the partition (string to string map, required)
 - **with_location**: Check the partition existence with the location (boolean, default: `false`)
-- **error_if_not_exist**: Raise the exception if the partition does not exist. (boolean, default: `false`)
+- **error_if_not_exist**: Raise the exception if the partition or location does not exist. (boolean, default: `false`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
 ### Output Parameters
@@ -264,6 +264,22 @@ Nothing
 ### Output Parameters
 
 Nothing
+
+## Configuration for `athena.table_exists?>` operator
+
+### Options
+
+- **database**: The name of the database. (string, required)
+- **table**: The name of the table. (string, required)
+- **with_location**: Check the partition existence with the location (boolean, default: `false`)
+- **error_if_not_exist**: Raise the exception if the table or location does not exist. (boolean, default: `false`)
+- **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+
+### Output Parameters
+
+- **athena.last_partition_exists.table_exists**: `true` if the table exists, or `false` (boolean)
+- **athena.last_partition_exists.location_exists**: `true` if the table location exists, or `false`. `null` if not set **with_location** option is `true`. (boolean)
+
 
 # Development
 
