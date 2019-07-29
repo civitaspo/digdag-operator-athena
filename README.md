@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.2.3
+      - pro.civitaspo:digdag-operator-athena:0.2.4
   athena:
     auth_method: profile
 
@@ -31,6 +31,8 @@ _export:
   table: hoge
   output: s3://mybucket/prefix/
 ```
+
+See [examples](./example/example.dig) for more cases.
 
 # Configuration
 

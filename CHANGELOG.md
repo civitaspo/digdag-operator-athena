@@ -1,3 +1,9 @@
+0.2.4 (2019-07-29)
+==================
+
+* [New Feature] Add `athena.table_exists?>` operator
+* [New Feature] Add `athena.partition_exists?>` operator
+
 0.2.3 (2019-07-19)
 ==================
 * [New Feature] Add `athena.drop_table_multi>` operator
