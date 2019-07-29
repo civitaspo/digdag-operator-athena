@@ -1,3 +1,8 @@
+0.2.5 (2019-07-29)
+==================
+
+* [Fix] Catch any initialization exception and re-throw as `ConfigException`
+
 0.2.4 (2019-07-29)
 ==================
 
