@@ -13,8 +13,10 @@ import pro.civitaspo.digdag.plugin.athena.ctas.AthenaCtasOperator
 import pro.civitaspo.digdag.plugin.athena.drop_partition.AthenaDropPartitionOperator
 import pro.civitaspo.digdag.plugin.athena.drop_table.AthenaDropTableOperator
 import pro.civitaspo.digdag.plugin.athena.drop_table_multi.AthenaDropTableMultiOperator
+import pro.civitaspo.digdag.plugin.athena.partition_exists.AthenaPartitionExistsOperator
 import pro.civitaspo.digdag.plugin.athena.preview.AthenaPreviewOperator
 import pro.civitaspo.digdag.plugin.athena.query.AthenaQueryOperator
+import pro.civitaspo.digdag.plugin.athena.table_exists.AthenaTableExistsOperator
 
 
 object AthenaPlugin
@@ -38,7 +40,9 @@ object AthenaPlugin
                 operatorFactory("athena.query", classOf[AthenaQueryOperator]),
                 operatorFactory("athena.preview", classOf[AthenaPreviewOperator]),
                 operatorFactory("athena.drop_table", classOf[AthenaDropTableOperator]),
-                operatorFactory("athena.drop_table_multi", classOf[AthenaDropTableMultiOperator])
+                operatorFactory("athena.drop_table_multi", classOf[AthenaDropTableMultiOperator]),
+                operatorFactory("athena.partition_exists?", classOf[AthenaPartitionExistsOperator]),
+                operatorFactory("athena.table_exists?", classOf[AthenaTableExistsOperator])
                 )
         }
 
