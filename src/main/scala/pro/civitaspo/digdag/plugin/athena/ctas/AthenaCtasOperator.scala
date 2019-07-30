@@ -130,15 +130,20 @@ class AthenaCtasOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         saveMode match {
-            case SaveMode.ErrorIfExists if location.isDefined && hasObjects(location.get) =>
+            case SaveMode.ErrorIfExists if location.exists(aws.s3.hasObjects) =>
                 throw new IllegalStateException(s"${location.get} already exists")
-            case SaveMode.Ignore if location.isDefined && hasObjects(location.get)        =>
+
+            case SaveMode.Ignore if location.exists(aws.s3.hasObjects) =>
                 logger.info(s"${location.get} already exists, so ignore this session.")
                 return TaskResult.empty(request)
-            case SaveMode.Overwrite if location.isDefined                                 =>
-                logger.info(s"Overwrite ${location.get}")
-                rmObjects(location.get)
-            case _                                                                        => // do nothing
+
+            case SaveMode.Overwrite =>
+                location.foreach { l =>
+                    logger.info(s"Overwrite $l")
+                    aws.s3.rm_r(l).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
+                }
+
+            case _ => // do nothing
         }
 
         val subTask: Config = cf.create()
@@ -149,16 +154,6 @@ class AthenaCtasOperator(operatorName: String,
         val builder: ImmutableTaskResult.Builder = TaskResult.defaultBuilder(cf)
         builder.subtaskConfig(subTask)
         builder.build()
-    }
-
-    protected def hasObjects(location: String): Boolean =
-    {
-        aws.s3.ls(location).nonEmpty
-    }
-
-    protected def rmObjects(location: String): Unit =
-    {
-        aws.s3.rm_r(location).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
     }
 
     protected def generateCtasQuery(): String =
