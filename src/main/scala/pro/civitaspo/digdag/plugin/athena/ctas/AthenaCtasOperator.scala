@@ -74,7 +74,7 @@ class AthenaCtasOperator(operatorName: String,
     }
 
     protected val selectQueryOrFile: String = params.get("_command", classOf[String])
-    protected val database: Option[String] = Option(params.getOptional("database", classOf[String]).orNull())
+    protected val database: String = params.getOptional("database", classOf[String]).or(DEFAULT_DATABASE_NAME)
     protected val table: String = params.get("table", classOf[String], defaultTableName)
     protected val workGroup: Option[String] = Option(params.getOptional("workgroup", classOf[String]).orNull())
     protected val location: Option[String] = {
@@ -216,7 +216,7 @@ class AthenaCtasOperator(operatorName: String,
         subTask.set("_type", "athena.query")
         subTask.set("_command", generateCtasQuery())
         subTask.set("token_prefix", tokenPrefix)
-        database.foreach(db => subTask.set("database", db))
+        subTask.set("database", database)
         workGroup.foreach(wg => subTask.set("workgroup", wg))
         subTask.set("timeout", timeout.toString)
         subTask.set("preview", false)
@@ -231,7 +231,7 @@ class AthenaCtasOperator(operatorName: String,
         val subTask: Config = cf.create()
 
         subTask.set("_type", "athena.drop_table")
-        subTask.set("database", database.getOrElse(DEFAULT_DATABASE_NAME))
+        subTask.set("database", database)
         subTask.set("table", table)
         subTask.set("with_location", false)
         catalogId.foreach(cid => subTask.set("catalog_id", cid))
