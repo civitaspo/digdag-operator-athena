@@ -137,7 +137,7 @@ class AthenaApasOperator(operatorName: String,
         subTask.set("+diff-schema", buildDiffSchemaInternalSubTaskConfig(comparisonTableName = dummyTable))
         subTask.set("+drop-dummy", buildDropTableSubTaskConfig(tableName = dummyTable))
         subTask.set("+store-data-by-ctas", buildCtasSubTaskConfig(tableName = dummyTable,
-                                                                  outputLocation = Option(location),
+                                                                  location = Option(location),
                                                                   format = fmt,
                                                                   compression = c,
                                                                   fieldDelimiter = fd,
@@ -199,7 +199,7 @@ class AthenaApasOperator(operatorName: String,
     }
 
     protected def buildCtasSubTaskConfig(tableName: String,
-                                         outputLocation: Option[String] = None,
+                                         location: Option[String] = None,
                                          format: String,
                                          compression: Option[String] = None,
                                          fieldDelimiter: Option[String] = None,
@@ -212,7 +212,7 @@ class AthenaApasOperator(operatorName: String,
         subTask.set("database", database)
         subTask.set("table", tableName)
         if (workGroup.isPresent) subTask.set("workgroup", workGroup.get())
-        outputLocation.foreach(ol => subTask.set("output", ol))
+        location.foreach(l => subTask.set("location", l))
         subTask.set("format", format)
         compression.foreach(c => subTask.set("compression", c))
         fieldDelimiter.foreach(fd => subTask.set("field_delimiter", fd))
