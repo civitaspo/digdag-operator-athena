@@ -3,7 +3,6 @@ package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
-import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
@@ -66,51 +65,36 @@ class AthenaCtasOperator(operatorName: String,
         }
     }
 
+    protected val DEFAULT_DATABASE_NAME = "default"
+
     protected lazy val defaultTableName: String = {
         val normalizedSessionUuid: String = sessionUuid.replaceAll("-", "")
         val random: String = Random.alphanumeric.take(5).mkString
         s"digdag_athena_ctas_${normalizedSessionUuid}_$random"
     }
 
-    @deprecated(message = "Use athena.ctas> instead.", since = "0.2.0")
-    protected val _selectQueryOrFile: Optional[String] = params.getOptional("select_query", classOf[String])
-    protected val selectQueryOrFile: String = {
-        val _command = params.getOptional("_command", classOf[String])
-        if (_selectQueryOrFile.isPresent && _command.isPresent) throw new ConfigException("Use athena.ctas> instead of 'select_query'")
-        else if (_command.isPresent) _command.get()
-        else {
-            logger.warn("'select_query' is deprecated. Use athena.ctas> instead.")
-            _selectQueryOrFile.get()
-        }
-    }
-    protected val database: Optional[String] = params.getOptional("database", classOf[String])
+    protected val selectQueryOrFile: String = params.get("_command", classOf[String])
+    protected val database: String = params.getOptional("database", classOf[String]).or(DEFAULT_DATABASE_NAME)
     protected val table: String = params.get("table", classOf[String], defaultTableName)
-    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
-    @deprecated(message = "Use location option instead", since = "0.2.2")
-    protected val output: Optional[String] = params.getOptional("output", classOf[String])
-    protected val location: Optional[String] = {
-        val l = params.getOptional("location", classOf[String])
-        if (output.isPresent && l.isPresent) {
-            logger.warn(s"Use the value of location option: ${l.get()} although the value of output option (${output.get()}) is specified.")
-            l
+    protected val workGroup: Option[String] = Option(params.getOptional("workgroup", classOf[String]).orNull())
+    protected val location: Option[String] = {
+        Option(params.getOptional("location", classOf[String]).orNull()) match {
+            case Some(l) if !l.endsWith("/") => Option(s"$l/")
+            case option: Option[String]      => option
         }
-        else if (output.isPresent) {
-            logger.warn("output option is deprecated. Please use location option instead.")
-            output
-        }
-        else l
     }
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
-    protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
+    protected val fieldDelimiter: Option[String] = Option(params.getOptional("field_delimiter", classOf[String]).orNull())
     protected val partitionedBy: Seq[String] = params.getListOrEmpty("partitioned_by", classOf[String]).asScala.toSeq
     protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala.toSeq
-    protected val bucketCount: Optional[Int] = params.getOptional("bucket_count", classOf[Int])
+    protected val bucketCount: Option[Int] = Option(params.getOptional("bucket_count", classOf[Int]).orNull())
     protected val additionalProperties: Map[String, String] = params.getMapOrEmpty("additional_properties", classOf[String], classOf[String]).asScala.toMap
     protected val tableMode: TableMode = TableMode(params.get("table_mode", classOf[String], "default"))
     protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
     protected val tokenPrefix: String = params.get("token_prefix", classOf[String], "digdag-athena-ctas")
     protected val timeout: DurationParam = params.get("timeout", classOf[DurationParam], DurationParam.parse("10m"))
+    protected val catalogId: Option[String] = Option(params.getOptional("catalog_id", classOf[String]).orNull())
 
     protected lazy val selectQuery: String = {
         val t: Try[String] =
@@ -149,53 +133,57 @@ class AthenaCtasOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         saveMode match {
-            case SaveMode.ErrorIfExists if location.isPresent && hasObjects(location.get) =>
-                throw new IllegalStateException(s"${location.get} already exists")
-            case SaveMode.Ignore if location.isPresent && hasObjects(location.get)        =>
-                logger.info(s"${location.get} already exists, so ignore this session.")
-                return TaskResult.empty(request)
-            case SaveMode.Overwrite if location.isPresent                                 =>
-                logger.info(s"Overwrite ${location.get}")
-                rmObjects(location.get)
-            case _                                                                        => // do nothing
+            case SaveMode.ErrorIfExists =>
+                if (aws.glue.table.exists(catalogId, database, table)) {
+                    throw new IllegalStateException(s"'$database.$table' already exists")
+                }
+                if (location.exists(aws.s3.hasObjects)) {
+                    throw new IllegalStateException(s"${location.get} already exists")
+                }
+
+            case SaveMode.Ignore =>
+                if (aws.glue.table.exists(catalogId, database, table)) {
+                    logger.info(s"'$database.$table' already exists, so ignore this session.")
+                    return TaskResult.empty(request)
+                }
+                if (location.exists(aws.s3.hasObjects)) {
+                    logger.info(s"${location.get} already exists, so ignore this session.")
+                    return TaskResult.empty(request)
+                }
+
+            case _ => // do nothing
         }
 
         val subTask: Config = cf.create()
-        if (saveMode.equals(SaveMode.Overwrite)) subTask.setNested("+drop-before-ctas", buildQuerySubTaskConfig(generateDropTableQuery()))
-        subTask.setNested("+ctas", buildQuerySubTaskConfig(generateCtasQuery()))
-        if (tableMode.equals(TableMode.DataOnly)) subTask.setNested("+drop-after-ctas", buildQuerySubTaskConfig(generateDropTableQuery()))
+        if (saveMode.equals(SaveMode.Overwrite)) {
+            subTask.setNested("+drop-before-ctas", buildDropTableSubTaskConfig(with_location = true))
+        }
+        subTask.setNested("+ctas", buildCtasQuerySubTaskConfig())
+        if (tableMode.equals(TableMode.DataOnly)) {
+            subTask.setNested("+drop-after-ctas", buildDropTableSubTaskConfig(with_location = false))
+        }
 
         val builder: ImmutableTaskResult.Builder = TaskResult.defaultBuilder(cf)
         builder.subtaskConfig(subTask)
         builder.build()
     }
 
-    protected def hasObjects(location: String): Boolean =
-    {
-        aws.s3.ls(location).nonEmpty
-    }
-
-    protected def rmObjects(location: String): Unit =
-    {
-        aws.s3.rm_r(location).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
-    }
-
     protected def generateCtasQuery(): String =
     {
         val propsBuilder = Map.newBuilder[String, String]
-        if (location.isPresent) propsBuilder += ("external_location" -> s"'${location.get}'")
+        location.foreach(l => propsBuilder += ("external_location" -> s"'$l'"))
         propsBuilder += ("format" -> s"'$format'")
         format match {
             case "parquet" => propsBuilder += ("parquet_compression" -> s"'$compression'")
             case "orc"     => propsBuilder += ("orc_compression" -> s"'$compression'")
             case _         => logger.info(s"compression is not supported for format: $format.")
         }
-        if (fieldDelimiter.isPresent) propsBuilder += ("field_delimiter" -> s"'${fieldDelimiter.get}'")
+        fieldDelimiter.foreach(fd => propsBuilder += ("field_delimiter" -> s"'$fd'"))
         if (partitionedBy.nonEmpty) propsBuilder += ("partitioned_by" -> s"ARRAY[${partitionedBy.map(s => s"'$s'").mkString(",")}]")
         if (bucketedBy.nonEmpty) {
             propsBuilder += ("bucketed_by" -> s"ARRAY[${bucketedBy.map(s => s"'$s'").mkString(",")}]")
-            if (!bucketCount.isPresent) throw new ConfigException(s"`bucket_count` must be set if `bucketed_by` is set.")
-            propsBuilder += ("bucket_count" -> s"${bucketCount.get}")
+            if (bucketCount.isEmpty) throw new ConfigException(s"`bucket_count` must be set if `bucketed_by` is set.")
+            bucketCount.foreach(bc => propsBuilder += ("bucket_count" -> s"$bc"))
         }
         if (additionalProperties.nonEmpty) propsBuilder ++= additionalProperties
 
@@ -220,33 +208,44 @@ class AthenaCtasOperator(operatorName: String,
            | """.stripMargin
     }
 
-    protected def generateDropTableQuery(): String =
+    protected def putCommonSettingToSubTask(subTask: Config): Unit =
     {
-        s""" -- GENERATED BY digdag athena.ctas> operator
-           | DROP TABLE IF EXISTS $table
-           | """.stripMargin
-    }
-
-    protected def buildQuerySubTaskConfig(query: String): Config =
-    {
-        logger.info(s"Will execute query in athena.query>: $query")
-
-        val subTask: Config = cf.create()
-
-        subTask.set("_type", "athena.query")
-        subTask.set("_command", query)
-        subTask.set("token_prefix", tokenPrefix)
-        if (database.isPresent) subTask.set("database", database)
-        if (workGroup.isPresent) subTask.set("workgroup", workGroup)
-        subTask.set("timeout", timeout.toString)
-        subTask.set("preview", false)
-
         subTask.set("auth_method", aws.conf.authMethod)
         subTask.set("profile_name", aws.conf.profileName)
         if (aws.conf.profileFile.isPresent) subTask.set("profile_file", aws.conf.profileFile.get())
         subTask.set("use_http_proxy", aws.conf.useHttpProxy)
         subTask.set("region", aws.region)
         if (aws.conf.endpoint.isPresent) subTask.set("endpoint", aws.conf.endpoint.get())
+    }
+
+    protected def buildCtasQuerySubTaskConfig(): Config =
+    {
+        val subTask: Config = cf.create()
+
+        subTask.set("_type", "athena.query")
+        subTask.set("_command", generateCtasQuery())
+        subTask.set("token_prefix", tokenPrefix)
+        subTask.set("database", database)
+        workGroup.foreach(wg => subTask.set("workgroup", wg))
+        subTask.set("timeout", timeout.toString)
+        subTask.set("preview", false)
+
+        putCommonSettingToSubTask(subTask)
+
+        subTask
+    }
+
+    protected def buildDropTableSubTaskConfig(with_location: Boolean): Config =
+    {
+        val subTask: Config = cf.create()
+
+        subTask.set("_type", "athena.drop_table")
+        subTask.set("database", database)
+        subTask.set("table", table)
+        subTask.set("with_location", with_location)
+        catalogId.foreach(cid => subTask.set("catalog_id", cid))
+
+        putCommonSettingToSubTask(subTask)
 
         subTask
     }

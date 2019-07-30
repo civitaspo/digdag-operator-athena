@@ -23,6 +23,7 @@ class AthenaDropTableOperator(operatorName: String,
     {
         if (!aws.glue.table.exists(catalogId, database, table)) {
             if (!ignoreIfNotExist) throw new IllegalStateException(s"The table '$database.$table' does not exist.")
+            logger.info(s"Do nothing because the table '$database.$table' does not exist.")
             return TaskResult.empty(cf)
         }
 

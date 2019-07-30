@@ -1,3 +1,15 @@
+0.3.0 (2019-07-30)
+==================
+
+* [Breaking change -- `athena.ctas>`] Remove output option which has been deprecated since v0.2.2.
+* [Breaking change -- `athena.ctas>`] Remove select_query option which has been deprecated since v0.2.0.
+* [Note -- `athena.ctas>`] Replace com.google.common.base.Optional -> scala.Option.
+* [Enhancement -- `athena.ctas>`] Add `/` as suffix if location option does not have.
+* [Change  -- `athena.ctas>`] Use `athena.drop_table>` operator instead of `athena.query>` operator when deleting the table.
+    * This change is to reduce the number of query executions.
+    * `athena.ctas>` operator depends on Glue privileges by this change.
+* [Note -- `athena.ctas>`] Use `default` database if not database option specified.
+
 0.2.5 (2019-07-29)
 ==================
 

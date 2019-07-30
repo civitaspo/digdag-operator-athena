@@ -105,6 +105,7 @@ class AthenaQueryOperator(operatorName: String,
 
     override def runTask(): TaskResult =
     {
+        logger.info(s"Run the query: \n$query")
         val execution: QueryExecution = aws.athena.runQuery(query = query,
                                                             database = Option(database.orNull),
                                                             workGroup = Option(workGroup.orNull()),
