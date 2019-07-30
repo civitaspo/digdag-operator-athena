@@ -75,7 +75,12 @@ class AthenaCtasOperator(operatorName: String,
     protected val database: Option[String] = Option(params.getOptional("database", classOf[String]).orNull())
     protected val table: String = params.get("table", classOf[String], defaultTableName)
     protected val workGroup: Option[String] = Option(params.getOptional("workgroup", classOf[String]).orNull())
-    protected val location: Option[String] = Option(params.getOptional("location", classOf[String]).orNull())
+    protected val location: Option[String] = {
+        Option(params.getOptional("location", classOf[String]).orNull()) match {
+            case Some(l) if !l.endsWith("/") => Option(s"$l/")
+            case option: Option[String]      => option
+        }
+    }
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
     protected val fieldDelimiter: Option[String] = Option(params.getOptional("field_delimiter", classOf[String]).orNull())
