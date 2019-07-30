@@ -3,7 +3,6 @@ package pro.civitaspo.digdag.plugin.athena.ctas
 
 import java.nio.charset.StandardCharsets.UTF_8
 
-import com.google.common.base.Optional
 import io.digdag.client.config.{Config, ConfigException}
 import io.digdag.spi.{ImmutableTaskResult, OperatorContext, TaskResult, TemplateEngine}
 import io.digdag.util.DurationParam
@@ -73,16 +72,16 @@ class AthenaCtasOperator(operatorName: String,
     }
 
     protected val selectQueryOrFile: String = params.get("_command", classOf[String])
-    protected val database: Optional[String] = params.getOptional("database", classOf[String])
+    protected val database: Option[String] = Option(params.getOptional("database", classOf[String]).orNull())
     protected val table: String = params.get("table", classOf[String], defaultTableName)
-    protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
-    protected val location: Optional[String] = params.getOptional("location", classOf[String])
+    protected val workGroup: Option[String] = Option(params.getOptional("workgroup", classOf[String]).orNull())
+    protected val location: Option[String] = Option(params.getOptional("location", classOf[String]).orNull())
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
-    protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
+    protected val fieldDelimiter: Option[String] = Option(params.getOptional("field_delimiter", classOf[String]).orNull())
     protected val partitionedBy: Seq[String] = params.getListOrEmpty("partitioned_by", classOf[String]).asScala.toSeq
     protected val bucketedBy: Seq[String] = params.getListOrEmpty("bucketed_by", classOf[String]).asScala.toSeq
-    protected val bucketCount: Optional[Int] = params.getOptional("bucket_count", classOf[Int])
+    protected val bucketCount: Option[Int] = Option(params.getOptional("bucket_count", classOf[Int]).orNull())
     protected val additionalProperties: Map[String, String] = params.getMapOrEmpty("additional_properties", classOf[String], classOf[String]).asScala.toMap
     protected val tableMode: TableMode = TableMode(params.get("table_mode", classOf[String], "default"))
     protected val saveMode: SaveMode = SaveMode(params.get("save_mode", classOf[String], "overwrite"))
@@ -126,12 +125,12 @@ class AthenaCtasOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         saveMode match {
-            case SaveMode.ErrorIfExists if location.isPresent && hasObjects(location.get) =>
+            case SaveMode.ErrorIfExists if location.isDefined && hasObjects(location.get) =>
                 throw new IllegalStateException(s"${location.get} already exists")
-            case SaveMode.Ignore if location.isPresent && hasObjects(location.get)        =>
+            case SaveMode.Ignore if location.isDefined && hasObjects(location.get)        =>
                 logger.info(s"${location.get} already exists, so ignore this session.")
                 return TaskResult.empty(request)
-            case SaveMode.Overwrite if location.isPresent                                 =>
+            case SaveMode.Overwrite if location.isDefined                                 =>
                 logger.info(s"Overwrite ${location.get}")
                 rmObjects(location.get)
             case _                                                                        => // do nothing
@@ -160,19 +159,19 @@ class AthenaCtasOperator(operatorName: String,
     protected def generateCtasQuery(): String =
     {
         val propsBuilder = Map.newBuilder[String, String]
-        if (location.isPresent) propsBuilder += ("external_location" -> s"'${location.get}'")
+        location.foreach(l => propsBuilder += ("external_location" -> s"'$l'"))
         propsBuilder += ("format" -> s"'$format'")
         format match {
             case "parquet" => propsBuilder += ("parquet_compression" -> s"'$compression'")
             case "orc"     => propsBuilder += ("orc_compression" -> s"'$compression'")
             case _         => logger.info(s"compression is not supported for format: $format.")
         }
-        if (fieldDelimiter.isPresent) propsBuilder += ("field_delimiter" -> s"'${fieldDelimiter.get}'")
+        fieldDelimiter.foreach(fd => propsBuilder += ("field_delimiter" -> s"'$fd'"))
         if (partitionedBy.nonEmpty) propsBuilder += ("partitioned_by" -> s"ARRAY[${partitionedBy.map(s => s"'$s'").mkString(",")}]")
         if (bucketedBy.nonEmpty) {
             propsBuilder += ("bucketed_by" -> s"ARRAY[${bucketedBy.map(s => s"'$s'").mkString(",")}]")
-            if (!bucketCount.isPresent) throw new ConfigException(s"`bucket_count` must be set if `bucketed_by` is set.")
-            propsBuilder += ("bucket_count" -> s"${bucketCount.get}")
+            if (bucketCount.isEmpty) throw new ConfigException(s"`bucket_count` must be set if `bucketed_by` is set.")
+            bucketCount.foreach(bc => propsBuilder += ("bucket_count" -> s"$bc"))
         }
         if (additionalProperties.nonEmpty) propsBuilder ++= additionalProperties
 
@@ -213,8 +212,8 @@ class AthenaCtasOperator(operatorName: String,
         subTask.set("_type", "athena.query")
         subTask.set("_command", query)
         subTask.set("token_prefix", tokenPrefix)
-        if (database.isPresent) subTask.set("database", database)
-        if (workGroup.isPresent) subTask.set("workgroup", workGroup)
+        database.foreach(db => subTask.set("database", db))
+        workGroup.foreach(wg => subTask.set("workgroup", wg))
         subTask.set("timeout", timeout.toString)
         subTask.set("preview", false)
 
