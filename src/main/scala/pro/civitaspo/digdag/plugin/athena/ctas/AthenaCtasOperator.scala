@@ -86,20 +86,7 @@ class AthenaCtasOperator(operatorName: String,
     protected val database: Optional[String] = params.getOptional("database", classOf[String])
     protected val table: String = params.get("table", classOf[String], defaultTableName)
     protected val workGroup: Optional[String] = params.getOptional("workgroup", classOf[String])
-    @deprecated(message = "Use location option instead", since = "0.2.2")
-    protected val output: Optional[String] = params.getOptional("output", classOf[String])
-    protected val location: Optional[String] = {
-        val l = params.getOptional("location", classOf[String])
-        if (output.isPresent && l.isPresent) {
-            logger.warn(s"Use the value of location option: ${l.get()} although the value of output option (${output.get()}) is specified.")
-            l
-        }
-        else if (output.isPresent) {
-            logger.warn("output option is deprecated. Please use location option instead.")
-            output
-        }
-        else l
-    }
+    protected val location: Optional[String] = params.getOptional("location", classOf[String])
     protected val format: String = params.get("format", classOf[String], "parquet")
     protected val compression: String = params.get("compression", classOf[String], "snappy")
     protected val fieldDelimiter: Optional[String] = params.getOptional("field_delimiter", classOf[String])
