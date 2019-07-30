@@ -133,13 +133,22 @@ class AthenaCtasOperator(operatorName: String,
     override def runTask(): TaskResult =
     {
         saveMode match {
-            case SaveMode.ErrorIfExists if location.exists(aws.s3.hasObjects) =>
-                throw new IllegalStateException(s"${location.get} already exists")
+            case SaveMode.ErrorIfExists =>
+                if (aws.glue.table.exists(catalogId, database, table)) {
+                    throw new IllegalStateException(s"'$database.$table' already exists")
+                }
+                if (location.exists(aws.s3.hasObjects)) {
+                    throw new IllegalStateException(s"${location.get} already exists")
+                }
 
-            case SaveMode.Ignore if location.exists(aws.s3.hasObjects) =>
-                logger.info(s"${location.get} already exists, so ignore this session.")
-                return TaskResult.empty(request)
-
+            case SaveMode.Ignore =>
+                if (aws.glue.table.exists(catalogId, database, table)) {
+                    logger.info(s"'$database.$table' already exists, so ignore this session.")
+                    return TaskResult.empty(request)
+                }
+                if (location.exists(aws.s3.hasObjects)) {
+                    logger.info(s"${location.get} already exists, so ignore this session.")
+                    return TaskResult.empty(request)
             case SaveMode.Overwrite =>
                 location.foreach { l =>
                     logger.info(s"Overwrite $l")
