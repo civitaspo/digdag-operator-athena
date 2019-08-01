@@ -167,7 +167,7 @@ class AthenaCtasOperator(operatorName: String,
         val subTask: Config = cf.create()
         subTask.setNested("+ctas", buildCtasQuerySubTaskConfig())
         if (tableMode.equals(TableMode.DataOnly)) {
-            subTask.setNested("+drop-after-ctas", buildDropTableSubTaskConfig(with_location = false))
+            subTask.setNested("+drop-after-ctas", buildDropTableSubTaskConfig())
         }
 
         val builder: ImmutableTaskResult.Builder = TaskResult.defaultBuilder(cf)
@@ -242,14 +242,14 @@ class AthenaCtasOperator(operatorName: String,
         subTask
     }
 
-    protected def buildDropTableSubTaskConfig(with_location: Boolean): Config =
+    protected def buildDropTableSubTaskConfig(): Config =
     {
         val subTask: Config = cf.create()
 
         subTask.set("_type", "athena.drop_table")
         subTask.set("database", database)
         subTask.set("table", table)
-        subTask.set("with_location", with_location)
+        subTask.set("with_location", false)
         catalogId.foreach(cid => subTask.set("catalog_id", cid))
 
         putCommonSettingToSubTask(subTask)
