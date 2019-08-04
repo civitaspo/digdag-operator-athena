@@ -151,16 +151,23 @@ class AthenaCtasOperator(operatorName: String,
                     return TaskResult.empty(request)
                 }
 
+            case SaveMode.Overwrite =>
+                if (aws.glue.table.exists(catalogId, database, table)) {
+                    logger.info(s"'$database.$table' already exists, so delete this.")
+                    aws.glue.table.delete(catalogId, database, table)
+                }
+                if (location.exists(aws.s3.hasObjects)) {
+                    logger.info(s"${location.get} already exists, so delete this.")
+                    aws.s3.rm_r(location.get).foreach(uri => logger.info(s"Deleted: ${uri.toString}"))
+                }
+
             case _ => // do nothing
         }
 
         val subTask: Config = cf.create()
-        if (saveMode.equals(SaveMode.Overwrite)) {
-            subTask.setNested("+drop-before-ctas", buildDropTableSubTaskConfig(with_location = true))
-        }
         subTask.setNested("+ctas", buildCtasQuerySubTaskConfig())
         if (tableMode.equals(TableMode.DataOnly)) {
-            subTask.setNested("+drop-after-ctas", buildDropTableSubTaskConfig(with_location = false))
+            subTask.setNested("+drop-after-ctas", buildDropTableSubTaskConfig())
         }
 
         val builder: ImmutableTaskResult.Builder = TaskResult.defaultBuilder(cf)
@@ -235,14 +242,14 @@ class AthenaCtasOperator(operatorName: String,
         subTask
     }
 
-    protected def buildDropTableSubTaskConfig(with_location: Boolean): Config =
+    protected def buildDropTableSubTaskConfig(): Config =
     {
         val subTask: Config = cf.create()
 
         subTask.set("_type", "athena.drop_table")
         subTask.set("database", database)
         subTask.set("table", table)
-        subTask.set("with_location", with_location)
+        subTask.set("with_location", false)
         catalogId.foreach(cid => subTask.set("catalog_id", cid))
 
         putCommonSettingToSubTask(subTask)
