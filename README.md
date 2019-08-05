@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.3.0
+      - pro.civitaspo:digdag-operator-athena:0.3.1
   athena:
     auth_method: profile
 
