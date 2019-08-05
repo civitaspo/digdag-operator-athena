@@ -138,11 +138,19 @@ _export:
     echo>: ${athena.last_table_exists}
 
 +step17:
-  athena.drop_table_multi>:
-  database: ${database}
-  regexp: 'hoge_\d+'
-  with_location: true
-  limit: 3
+  +step1:
+    athena.drop_table_multi>:
+    database: ${database}
+    regexp: 'hoge_\d+'
+    with_location: true
+    limit: 3
+  +step2:
+    athena.drop_table_multi>:
+    database: ${database}
+    regexp: 'hoge_\d+'
+    with_location: true
+    protect:
+      created_within: 1h
 
 +step18:
   athena.drop_table_multi>:
