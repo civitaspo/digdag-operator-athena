@@ -282,6 +282,17 @@ Nothing
 - **athena.last_partition_exists.table_exists**: `true` if the table exists, or `false` (boolean)
 - **athena.last_partition_exists.location_exists**: `true` if the table location exists, or `false`. `null` if not set **with_location** option is `true`. (boolean)
 
+## Configuration for `athena.each_database>` operator
+
+- **catalog_id**: Glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+- **parallel_slice**: The slice number of parallelism execution for **_do** subtasks. (integer, default: `1`)
+- **_do**: The definition of subtasks with exported database information. (config, required)
+  - exported parameters are below.
+    - **athena.each_database.export.name**: database name (string)
+    - **athena.each_database.export.created_at**: epoch millis of creation time (integer)
+    - **athena.each_database.export.description**: database description (string)
+    - **athena.each_database.export.parameters**: database parameters that are defined in glue data catalog (conifg)
+
 
 # Development
 
