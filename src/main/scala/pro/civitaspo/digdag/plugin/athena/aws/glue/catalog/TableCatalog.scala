@@ -57,16 +57,17 @@ case class TableCatalog(glue: Glue)
         expression.foreach(req.setExpression)
         limit.foreach(l => req.setMaxResults(l))
 
-        def recursiveGetTables(nextToken: Option[String] = None): Seq[Table] =
+        def recursiveGetTables(nextToken: Option[String] = None,
+                               lastTables: Seq[Table] = Seq()): Seq[Table] =
         {
             nextToken.foreach(req.setNextToken)
             val results = glue.withGlue(_.getTables(req))
-            val tables = results.getTableList.asScala.toSeq
+            val tables = lastTables ++ results.getTableList.asScala.toSeq
             limit.foreach { i =>
                 if (tables.length >= i) return tables.slice(0, i)
             }
             Option(results.getNextToken) match {
-                case Some(nt) => tables ++ recursiveGetTables(nextToken = Option(nt))
+                case Some(nt) => recursiveGetTables(nextToken = Option(nt), lastTables = tables)
                 case None     => tables
             }
         }

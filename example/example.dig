@@ -193,3 +193,12 @@ _export:
       c: "10"
   +step4:
     echo>: ${athena.last_partition_exists}
+
++step21:
+  athena.each_database>:
+  parallel_slice: 8
+  _do:
+    +echo1:
+      echo>: ${athena.each_database}
+    +echo2:
+      echo>: ${athena.each_database.name}
