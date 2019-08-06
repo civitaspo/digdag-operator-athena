@@ -26,10 +26,9 @@ _export:
   echo>: ${athena.last_query}
 
 +stap3:
-  athena.ctas>:
-  select_query: template.sql
+  athena.ctas>: template.sql
   table: hoge
-  output: s3://mybucket/prefix/
+  location: s3://mybucket/prefix/
 ```
 
 See [examples](./example/example.dig) for more cases.
@@ -218,7 +217,6 @@ Nothing
 - **database**: The database name for query execution context. (string, optional)
 - **table**: The table name for the new table (string, default: `digdag_athena_ctas_${session_uuid.replaceAll("-", "")}_${random}`)
 - **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
-- **output**: [**Deprecated**] Use **location** option instead.
 - **location**: Output location for data created by CTAS (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>/Unsaved/${YEAR}/${MONTH}/${DAY}/${athena_query_id}/"`)
 - **format**: The data format for the CTAS query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: `"parquet"`)
 - **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: `"snappy"`)
