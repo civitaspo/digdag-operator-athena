@@ -1,8 +1,14 @@
+0.3.2 (2019-08-06)
+==================
+
+* [Fix] `aws.glue.list` bug: `limit` does not work correctly.
+* [New feature] Add `athena.each_database>` operator.
+
 0.3.1 (2019-08-05)
 ==================
 
 * [Fix -- `athena.ctas>`] When using `save_mode: overwrite`, delete the specified table and location, not the table location that the data catalog has.
-* [New featuere -- `athena.drop_table_multi>`] `protect` option.
+* [New feature -- `athena.drop_table_multi>`] `protect` option.
 
 0.3.0 (2019-07-30)
 ==================

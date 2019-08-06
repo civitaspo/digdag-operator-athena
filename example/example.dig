@@ -4,7 +4,7 @@ _export:
       - file://${repos}
       # - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.3.1
+      - pro.civitaspo:digdag-operator-athena:0.3.2
   athena:
     auth_method: profile
     value: 5
@@ -193,3 +193,12 @@ _export:
       c: "10"
   +step4:
     echo>: ${athena.last_partition_exists}
+
++step21:
+  athena.each_database>:
+  parallel_slice: 8
+  _do:
+    +echo1:
+      echo>: ${athena.each_database}
+    +echo2:
+      echo>: ${athena.each_database.name}
