@@ -1,3 +1,9 @@
+0.3.2 (2019-08-06)
+==================
+
+* [Fix] `aws.glue.list` bug: `limit` does not work correctly.
+* [New feature] Add `athena.each_database>` operator.
+
 0.3.1 (2019-08-05)
 ==================
 
