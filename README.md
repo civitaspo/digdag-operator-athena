@@ -170,7 +170,7 @@ Nothing
 - **database**: The name of the database. (string, optional)
 - **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
-- **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
+- **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `false`)
 
 ### Output Parameters
 
