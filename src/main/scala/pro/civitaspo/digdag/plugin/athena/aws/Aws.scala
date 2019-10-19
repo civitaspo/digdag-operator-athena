@@ -2,7 +2,7 @@ package pro.civitaspo.digdag.plugin.athena.aws
 
 
 import com.amazonaws.{ClientConfiguration, Protocol}
-import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials, EC2ContainerCredentialsProviderWrapper, EnvironmentVariableCredentialsProvider, SystemPropertiesCredentialsProvider}
+import com.amazonaws.auth.{AnonymousAWSCredentials, AWSCredentials, AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials, EC2ContainerCredentialsProviderWrapper, EnvironmentVariableCredentialsProvider, SystemPropertiesCredentialsProvider, WebIdentityTokenCredentialsProvider}
 import com.amazonaws.auth.profile.{ProfileCredentialsProvider, ProfilesConfigFile}
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
@@ -78,14 +78,15 @@ case class Aws(conf: AwsConf)
     private def standardCredentialsProvider: AWSCredentialsProvider =
     {
         conf.authMethod match {
-            case "basic"      => basicAuthMethodAWSCredentialsProvider
-            case "env"        => envAuthMethodAWSCredentialsProvider
-            case "instance"   => instanceAuthMethodAWSCredentialsProvider
-            case "profile"    => profileAuthMethodAWSCredentialsProvider
-            case "properties" => propertiesAuthMethodAWSCredentialsProvider
-            case "anonymous"  => anonymousAuthMethodAWSCredentialsProvider
-            case "session"    => sessionAuthMethodAWSCredentialsProvider
-            case _            =>
+            case "basic"              => basicAuthMethodAWSCredentialsProvider
+            case "env"                => envAuthMethodAWSCredentialsProvider
+            case "instance"           => instanceAuthMethodAWSCredentialsProvider
+            case "profile"            => profileAuthMethodAWSCredentialsProvider
+            case "properties"         => propertiesAuthMethodAWSCredentialsProvider
+            case "anonymous"          => anonymousAuthMethodAWSCredentialsProvider
+            case "session"            => sessionAuthMethodAWSCredentialsProvider
+            case "web_identity_token" => webIdentityTokenAuthMethodAWSCredentialsProvider
+            case _                    =>
                 throw new ConfigException(
                     s"""auth_method: "${conf.authMethod}" is not supported. available `auth_method`s are "basic", "env", "instance", "profile", "properties", "anonymous", or "session"."""
                     )
@@ -149,6 +150,18 @@ case class Aws(conf: AwsConf)
         if (!conf.sessionToken.isPresent) throw new ConfigException(s"""`session_token` must be set when `auth_method` is "${conf.authMethod}".""")
         val credentials: AWSCredentials = new BasicSessionCredentials(conf.accessKeyId.get(), conf.secretAccessKey.get(), conf.sessionToken.get())
         new AWSStaticCredentialsProvider(credentials)
+    }
+
+    private def webIdentityTokenAuthMethodAWSCredentialsProvider: AWSCredentialsProvider =
+    {
+        if (!conf.isAllowedAuthMethodWebIdentityToken) throw new ConfigException(s"""auth_method: "${conf.authMethod}" is not allowed.""")
+        if (!conf.webIdentityTokenFile.or(conf.defaultWebIdentityTokenFile).isPresent) throw new ConfigException(s"""`web_identity_token_file` or `athena.allow_auth_method_web_identity_token` (system) must be set when `auth_method` is "${conf.authMethod}".""")
+        if (!conf.webIdentityRoleArn.or(conf.defaultWebIdentityRoleArn).isPresent) throw new ConfigException(s"""`web_identity_role_arn` or `athena.allow_auth_method_web_identity_role_arn` (system) must be set when `auth_method` is "${conf.authMethod}".""")
+        WebIdentityTokenCredentialsProvider.builder()
+            .webIdentityTokenFile(conf.webIdentityTokenFile.or(conf.defaultWebIdentityTokenFile).get())
+            .roleArn(conf.webIdentityRoleArn.or(conf.defaultWebIdentityRoleArn).get())
+            .roleSessionName(conf.roleSessionName)
+            .build()
     }
 
     private def clientConfiguration: ClientConfiguration =

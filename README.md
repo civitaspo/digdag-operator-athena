@@ -15,7 +15,7 @@ _export:
     repositories:
       - https://jitpack.io
     dependencies:
-      - pro.civitaspo:digdag-operator-athena:0.3.2
+      - pro.civitaspo:digdag-operator-athena:0.4.0
   athena:
     auth_method: profile
 
@@ -26,10 +26,9 @@ _export:
   echo>: ${athena.last_query}
 
 +stap3:
-  athena.ctas>:
-  select_query: template.sql
+  athena.ctas>: template.sql
   table: hoge
-  output: s3://mybucket/prefix/
+  location: s3://mybucket/prefix/
 ```
 
 See [examples](./example/example.dig) for more cases.
@@ -51,7 +50,10 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.allow_auth_method_instance**: Indicates whether users can use **auth_method** `"instance"` (boolean, default: `false`)
 - **athena.allow_auth_method_profile**: Indicates whether users can use **auth_method** `"profile"` (boolean, default: `false`)
 - **athena.allow_auth_method_properties**: Indicates whether users can use **auth_method** `"properties"` (boolean, default: `false`)
+- **athena.allow_auth_method_web_identity_token**: Indicates whether users can use **auth_method** `"web_identity_token"` (boolean, default: `false`)
 - **athena.assume_role_timeout_duration**: Maximum duration which server administer allows when users assume **role_arn**. (`DurationParam`, default: `1h`)
+- **athena.default_web_identity_token_file**: Path to a web identity token file. (string, optional)
+- **athena.default_web_identity_role_arn**:  AWS Role when using a web identity token. (string, optional)
 
 ### Secrets
 
@@ -78,6 +80,9 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
   - `"properties"`: uses aws.accessKeyId and aws.secretKey Java system properties.
   - `"anonymous"`: uses anonymous access. This auth method can access only public files.
   - `"session"`: uses temporary-generated access_key_id, secret_access_key and session_token.
+  - `"web_identity_token"`: uses web identity token.
+    - **web_identity_token_file**: path to a web identity token file. (string, default: given by **athena.default_web_identity_token_file**)
+    - **web_identity_role_arn**:  aws role arn when using a web identity token. (string, default: given by **athena.default_web_identity_role_arn**)
 - **use_http_proxy**: Indicate whether using when accessing AWS via http proxy. (boolean, default: `false`)
 - **region**: The AWS region to use for Athena service. (string, optional)
 - **endpoint**: The Amazon Athena endpoint address to use. (string, optional)
@@ -171,7 +176,7 @@ Nothing
 - **database**: The name of the database. (string, optional)
 - **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
 - **timeout**: Specify timeout period. (`DurationParam`, default: `"10m"`)
-- **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `true`)
+- **preview**: Call `athena.preview>` operator after run `athena.query>`. (boolean, default: `false`)
 
 ### Output Parameters
 
@@ -218,7 +223,6 @@ Nothing
 - **database**: The database name for query execution context. (string, optional)
 - **table**: The table name for the new table (string, default: `digdag_athena_ctas_${session_uuid.replaceAll("-", "")}_${random}`)
 - **workgroup**: The name of the workgroup in which the query is being started. (string, optional)
-- **output**: [**Deprecated**] Use **location** option instead.
 - **location**: Output location for data created by CTAS (string, default: `"s3://aws-athena-query-results-${AWS_ACCOUNT_ID}-<AWS_REGION>/Unsaved/${YEAR}/${MONTH}/${DAY}/${athena_query_id}/"`)
 - **format**: The data format for the CTAS query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: `"parquet"`)
 - **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: `"snappy"`)

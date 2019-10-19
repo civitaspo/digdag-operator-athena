@@ -10,6 +10,7 @@ case class AwsConf(
     isAllowedAuthMethodInstance: Boolean,
     isAllowedAuthMethodProfile: Boolean,
     isAllowedAuthMethodProperties: Boolean,
+    isAllowedAuthMethodWebIdentityToken: Boolean,
     assumeRoleTimeoutDuration: DurationParam,
     accessKeyId: Optional[String],
     secretAccessKey: Optional[String],
@@ -20,6 +21,10 @@ case class AwsConf(
     authMethod: String,
     profileName: String,
     profileFile: Optional[String],
+    defaultWebIdentityTokenFile: Optional[String],
+    webIdentityTokenFile: Optional[String],
+    defaultWebIdentityRoleArn: Optional[String],
+    webIdentityRoleArn: Optional[String],
     useHttpProxy: Boolean,
     region: Optional[String],
     endpoint: Optional[String]
