@@ -1,3 +1,9 @@
+0.4.0 (2019-10-20)
+==================
+* [Enhancement] Update dependencies: aws-sdk 1.11.587  -> 1.11.653,  digdag 0.9.37  -> 0.9.39
+* [Fix] Fix README: athena.query> preview option is false by default
+* [New feature] Support auth_method: web_identity_token
+
 0.3.2 (2019-08-06)
 ==================
 
