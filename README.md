@@ -104,6 +104,21 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 
 Nothing
 
+## Configuration for `athena.copy_catalog>` operator
+
+### Options
+
+- **athena.copy_catalog>**: The target catalog information to copy. (array of map, required)
+  - **database**: The name of the database. (string, required)
+  - **table**: The name of the table. (string, required)
+  - **partition_filter**: An expression that filters the partitions to be returned. The expression uses SQL syntax similar to the SQL WHERE filter clause. The SQL statement parser JSQLParser parses the expression. See. [GetPartitionsRequest](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/glue/model/GetPartitionsRequest.html#getExpression--) (string, optional)
+- **catalog_id**: The source glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
+- **to**: The destination information. (map, required)
+  - **to** has the same options as the [Common Configuration](#common-configuration). The same values except the below options are used if you do not specify the option in **to**.
+  - **role_arn**: The aws role to assume when submitting athena queries. (string, optional)
+  - **role_session_name**: The aws role session name when assuming the role. (default: `digdag-athena-2-${session_uuid}`)
+  - **catalog_id**: The destination glue data catalog id if you use a catalog different from the destination account/region default catalog. (string, optional)
+  
 ## Configuration for `athena.drop_partition>` operator
 
 ### Options
@@ -202,7 +217,7 @@ Nothing
 ### Output Parameters
 
 - **athena.last_preview.id**: The identifier for the query execution. (string)
-- **athena.last_preview.columns**: The information that describes the column structure and data types of a table of query results. (map of array)
+- **athena.last_preview.columns**: The information that describes the column structure and data types of a table of query results. (array of map)
   - **case_sensitive**: Indicates whether values in the column are case-sensitive. (boolean)
   - **catalog**: The catalog to which the query results belong. (string)
   - **label**: A column label. (string)

@@ -9,6 +9,7 @@ import io.digdag.spi.{Operator, OperatorContext, OperatorFactory, OperatorProvid
 import javax.inject.Inject
 import pro.civitaspo.digdag.plugin.athena.add_partition.AthenaAddPartitionOperator
 import pro.civitaspo.digdag.plugin.athena.apas.{AthenaApasOperator, AthenaDiffSchemaInternalOperator}
+import pro.civitaspo.digdag.plugin.athena.copy_catalog.AthenaCopyCatalogOperator
 import pro.civitaspo.digdag.plugin.athena.ctas.AthenaCtasOperator
 import pro.civitaspo.digdag.plugin.athena.drop_partition.AthenaDropPartitionOperator
 import pro.civitaspo.digdag.plugin.athena.drop_table.AthenaDropTableOperator
@@ -44,7 +45,8 @@ object AthenaPlugin
                 operatorFactory("athena.drop_table_multi", classOf[AthenaDropTableMultiOperator]),
                 operatorFactory("athena.partition_exists?", classOf[AthenaPartitionExistsOperator]),
                 operatorFactory("athena.table_exists?", classOf[AthenaTableExistsOperator]),
-                operatorFactory("athena.each_database", classOf[AthenaEachDatabaseOperator])
+                operatorFactory("athena.each_database", classOf[AthenaEachDatabaseOperator]),
+                operatorFactory("athena.copy_catalog", classOf[AthenaCopyCatalogOperator])
                 )
         }
 
