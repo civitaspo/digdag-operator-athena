@@ -67,6 +67,9 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **athena.http_proxy.scheme** `"https"` or `"http"` (default: `"https"`)
 - **athena.http_proxy.user** proxy user (optional)
 - **athena.http_proxy.password**: http proxy password (optional)
+- **athena.x.***: The same settings as the above for the cross execution by another athena, glue data catalog, s3 and so on. When **athena.x.*** does not have the value, **athena.*** are used instead except the below options. (optional)
+  - **athena.x.role_arn**: (optional)
+  - **athena.x.role_session_name**: (default: `digdag-athena-x-${session_uuid}`)
 
 ### Options
 
@@ -96,7 +99,7 @@ Define the below options on properties (which is indicated by `-c`, `--config`).
 - **location**: The location of the partition. If not specified, this operator generates like hive automatically. (string, default: auto generated like the below)
     - `${table location}/${partition key1}=${partition value1}/${partition key2}=${partition value2}/...`
 - **partition_kv**: key-value pairs for partitioning (string to string map, required)
-- **save_mode**: The mode to save the partition. (string, default = `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
+- **save_mode**: The mode to save the partition. (string, default: `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
 - **follow_location**: Skip to add a partition and drop the partition if the location does not exist. (boolean, default: `true`)
 - **catalog_id**: glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 
@@ -113,11 +116,9 @@ Nothing
   - **table**: The name of the table. (string, required)
   - **partition_filter**: An expression that filters the partitions to be returned. The expression uses SQL syntax similar to the SQL WHERE filter clause. The SQL statement parser JSQLParser parses the expression. See. [GetPartitionsRequest](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/glue/model/GetPartitionsRequest.html#getExpression--) (string, optional)
 - **catalog_id**: The source glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
-- **to**: The destination information. (map, required)
-  - **to** has the same options as the [Common Configuration](#common-configuration). The same values except the below options are used if you do not specify the option in **to**.
-  - **role_arn**: The aws role to assume when submitting athena queries. (string, optional)
-  - **role_session_name**: The aws role session name when assuming the role. (default: `digdag-athena-2-${session_uuid}`)
+- **to**: The destination information. **to** has some options, and the same options as the [Common Configuration](#common-configuration). The latter have the same values as specified in the parent level if you do not specify the option in **to**. When accessing to aws, these settings are used with **athena.x.***. (map, required)
   - **catalog_id**: The destination glue data catalog id if you use a catalog different from the destination account/region default catalog. (string, optional)
+- **save_mode**: The mode to save the catalog. (string, default: `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
   
 ## Configuration for `athena.drop_partition>` operator
 
