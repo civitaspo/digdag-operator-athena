@@ -118,7 +118,7 @@ Nothing
 - **catalog_id**: The source glue data catalog id if you use a catalog different from account/region default catalog. (string, optional)
 - **to**: The destination information. **to** has some options, and the same options as the [Common Configuration](#common-configuration). The latter have the same values as specified in the parent level if you do not specify the option in **to**. When accessing to aws, these settings are used with **athena.x.***. (map, required)
   - **catalog_id**: The destination glue data catalog id if you use a catalog different from the destination account/region default catalog. (string, optional)
-- **save_mode**: The mode to save the catalog. (string, default: `"overwrite"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
+- **save_mode**: The mode to save the catalog. (string, default: `"skip_if_exists"`, available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`)
   
 ## Configuration for `athena.drop_partition>` operator
 

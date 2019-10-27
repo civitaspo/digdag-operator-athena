@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.aws.glue.catalog
 
 
-import com.amazonaws.services.glue.model.{Database, GetDatabaseRequest, GetDatabasesRequest}
+import com.amazonaws.services.glue.model.{CreateDatabaseRequest, CreateDatabaseResult, Database, DatabaseInput, GetDatabaseRequest, GetDatabasesRequest, UpdateDatabaseRequest}
 import pro.civitaspo.digdag.plugin.athena.aws.glue.Glue
 
 import scala.jdk.CollectionConverters._
@@ -51,4 +51,39 @@ case class DatabaseCatalog(glue: Glue)
         recursiveGetDatabases()
     }
 
+    def create(catalogIdOption: Option[String],
+               database: Database): Unit =
+    {
+        val req = new CreateDatabaseRequest()
+        catalogIdOption.foreach(req.setCatalogId)
+
+        val di = new DatabaseInput()
+        di.setCreateTableDefaultPermissions(database.getCreateTableDefaultPermissions)
+        di.setDescription(database.getDescription)
+        di.setLocationUri(database.getLocationUri)
+        di.setName(database.getName)
+        di.setParameters(database.getParameters)
+
+        req.setDatabaseInput(di)
+
+        glue.withGlue(_.createDatabase(req))
+    }
+
+    def update(catalogIdOption: Option[String],
+               database: Database): Unit =
+    {
+        val req = new UpdateDatabaseRequest()
+        catalogIdOption.foreach(req.setCatalogId)
+
+        val di = new DatabaseInput()
+        di.setCreateTableDefaultPermissions(database.getCreateTableDefaultPermissions)
+        di.setDescription(database.getDescription)
+        di.setLocationUri(database.getLocationUri)
+        di.setName(database.getName)
+        di.setParameters(database.getParameters)
+
+        req.setDatabaseInput(di)
+
+        glue.withGlue(_.updateDatabase(req))
+    }
 }

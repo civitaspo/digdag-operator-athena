@@ -1,7 +1,7 @@
 package pro.civitaspo.digdag.plugin.athena.aws.glue.catalog
 
 
-import com.amazonaws.services.glue.model.{DeleteTableRequest, GetTableRequest, GetTablesRequest, Table}
+import com.amazonaws.services.glue.model.{CreateTableRequest, DeleteTableRequest, GetTableRequest, GetTablesRequest, Table, TableInput, UpdateTableRequest}
 import pro.civitaspo.digdag.plugin.athena.aws.glue.Glue
 
 import scala.jdk.CollectionConverters._
@@ -73,5 +73,57 @@ case class TableCatalog(glue: Glue)
         }
 
         recursiveGetTables()
+    }
+
+    def create(catalogIdOption: Option[String],
+               table: Table): Unit =
+    {
+        val req = new CreateTableRequest()
+        catalogIdOption.foreach(req.setCatalogId)
+        req.setDatabaseName(table.getDatabaseName)
+
+        val ti = new TableInput()
+        ti.setDescription(table.getDescription)
+        ti.setLastAccessTime(table.getLastAccessTime)
+        ti.setLastAnalyzedTime(table.getLastAnalyzedTime)
+        ti.setName(table.getName)
+        ti.setOwner(table.getOwner)
+        ti.setParameters(table.getParameters)
+        ti.setPartitionKeys(table.getPartitionKeys)
+        ti.setRetention(table.getRetention)
+        ti.setStorageDescriptor(table.getStorageDescriptor)
+        ti.setTableType(table.getTableType)
+        ti.setViewExpandedText(table.getViewExpandedText)
+        ti.setViewOriginalText(table.getViewOriginalText)
+
+        req.setTableInput(ti)
+
+        glue.withGlue(_.createTable(req))
+    }
+
+    def update(catalogIdOption: Option[String],
+               table: Table): Unit =
+    {
+        val req = new UpdateTableRequest()
+        catalogIdOption.foreach(req.setCatalogId)
+        req.setDatabaseName(table.getDatabaseName)
+
+        val ti = new TableInput()
+        ti.setDescription(table.getDescription)
+        ti.setLastAccessTime(table.getLastAccessTime)
+        ti.setLastAnalyzedTime(table.getLastAnalyzedTime)
+        ti.setName(table.getName)
+        ti.setOwner(table.getOwner)
+        ti.setParameters(table.getParameters)
+        ti.setPartitionKeys(table.getPartitionKeys)
+        ti.setRetention(table.getRetention)
+        ti.setStorageDescriptor(table.getStorageDescriptor)
+        ti.setTableType(table.getTableType)
+        ti.setViewExpandedText(table.getViewExpandedText)
+        ti.setViewOriginalText(table.getViewOriginalText)
+
+        req.setTableInput(ti)
+
+        glue.withGlue(_.updateTable(req))
     }
 }

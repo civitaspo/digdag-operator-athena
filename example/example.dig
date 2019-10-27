@@ -202,3 +202,18 @@ _export:
       echo>: ${athena.each_database}
     +echo2:
       echo>: ${athena.each_database.name}
+
++step22:
+  +step1: # create
+    athena.copy_catalog>:
+      - {database: example_db, table: hoge}
+    to:
+      catalog_id: 085107194442
+      region: us-east-1
+  +step2: # skip
+    athena.copy_catalog>:
+      - {database: example_db, table: hoge}
+    to:
+      catalog_id: 085107194442
+      region: us-east-1
+
