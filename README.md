@@ -151,7 +151,7 @@ Nothing
 - **format**: The data format for the query results, such as `"orc"`, `"parquet"`, `"avro"`, `"json"`, or `"textfile"`. (string, default: auto detection)
 - **compression**: The compression type to use for `"orc"` or `"parquet"`. (string, default: auto detection)
 - **field_delimiter**: The field delimiter for files in CSV, TSV, and text files. This option is applied only when **format** is specific to text-based data storage formats. (string, auto detection)
-- **save_mode**: Specify the expected behavior. Available values are `"skip_if_exists"`, `"error_if_exists"`, `"ignore"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
+- **save_mode**: Specify the expected behavior. Available values are `"skip_if_exists"`, `"error_if_exists"`, `"overwrite"`. See the below explanation of the behaviour. (string, default: `"overwrite"`)
     - `"skip_if_exists"`: Skip processing if the partition or the location exists.
     - `"error_if_exists"`: Raise error if the partition or the location exists.
     - `"overwrite"`: Always recreate the partition and the location if exists. This operation is not atomic.
